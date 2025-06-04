@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+{% block main %}
+    <div class="detail-body">
+        <!-- 面包屑 -->
+        <div class="bread">
+            <ul class="bread-content">
+                <li class="bread-item">
+                    <a href="/goods/list/">首页</a>&gt;
+                </li>
+
+                <li class="bread-item">
+                    <a href="/categorys/{{ goodObj.category_id }}">{{ goodObj.category.cname }}</a>&gt;
+                </li>
+
+                <li class="bread-item">
+                    <a href="javascript:void(0);">{{ goodObj.gname }}</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- detail-content -->
+        <div class="detail-content">
+            <div class="detail-con-left">
+                <img id="rightimg" src="{{ goodObj.getImgUrl}}">
+            </div>
+            <div class="detail-con-right">
+                <h3>{{ goodObj.gdesc }}</h3>
+                <div class="price">
+                    <i>￥</i>
+                    <p>{{ goodObj.price }}</p>
+                    <s>￥{{ goodObj.oldprice }}</s>
+                </div>
+                <div class="line"></div>
+                <div class="color">
+                    <p class="p-item">颜色：</p>
+                    <ul class="MinImgList">
+                        {% for color in goodObj.getColors %}
+{#                            if 嵌在样式字符串里面 默认标志加在循环的第一个图片上#}
+                             <li class="MinImg  {% if forloop.first %}active{% endif %}" colorid="{{ color.id }}">
+                                 <img src="{{color.colorurl}}" width="30px" height="30px" alt="{{color.colorurl}}">
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="size">
+                    <p class="p-item">
+                        尺码：
+                    </p>
+                    <ul class="size-list">
+                        {% for size in goodObj.getSizes %}
+                            <li sizeid="{{ size.id }}" class="size-item {% if forloop.first %}active{% endif %}">{{ size.sname }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="num">
+                    <p class="p-item">
+                        数量：
+                    </p>
+                    <div class="jian">-</div>
+                    <input type="number" name="" value="1">
+                    <div class="jia">+</div>
+                </div>
+              <form action="/cart/" method="post">
+                    <input name="" type="hidden">
+                    <input name="goodsid" type="hidden" value="4">
+{#                  隐藏掉输入框 #}
+                    <input name="sizeid" type="hidden">
+                    <input name="count" type="hidden">
+                    <input name="type" value="add" type="hidden">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="QYciumFpuMt1tAzw4HyUsSbgralhP9ykf6fRRkLbNhqtrzI6FElzKnFZdIenh6pT">
+                    <button class="male" onclick="goCart()">单独购买</button>
+              </form>
+            </div>
+         <div class="detail-con-nav">
+        <ul class="detail-nav">
+            <li class="active nav-item "><a href="http://127.0.0.1:8000/goodsdetails/?goodsid=26#">商品详情</a></li>
+            <li class="nav-item"><a href="http://127.0.0.1:8000/goodsdetails/?goodsid=26#">物流与售后</a></li>
+            <li class="nav-item"><a href="http://127.0.0.1:8000/goodsdetails/?goodsid=26#">消费保障</a></li>
+            <li class="nav-item"><a href="http://127.0.0.1:8000/goodsdetails/?goodsid=26#">手机购买</a></li>
+        </ul>
+    </div>
+    <div class="sub-nav">
+        <ul class="subNav">
+            <li><a href="http://127.0.0.1:8000/goodsdetails/?goodsid=26#">整体款式</a></li>
+            <li><a href="http://127.0.0.1:8000/goodsdetails/?goodsid=26#">模特实拍</a></li>
+            <li><a href="http://127.0.0.1:8000/goodsdetails/?goodsid=26#">细节做工</a></li>
+        </ul>
+    </div>
+    <div class="zhanshi">
+        {% for dname,durls in goodObj.getDetailsDict.items %}
+            <div class="zhanshi-model">
+{#            循环字典{"整体款式":[urls],"模特实拍":[urls]}#}
+                    <p>{{ dname }}</p>
+                    <div class="line"></div>
+                    {% for url in durls %}
+                        <img src="{{ url }}" alt="xxx">
+                    {% endfor %}
+
+           </div>
+        {% endfor %}
+
+
+    </div>
+</div>
+</div>
+    <div class="goods-model" style="margin-right: -18px;text-align: center">
+        <img src="/static/images/recommend.png" style="position: relative;left: -10px;top: 10px">
+        <div class="goods-content">
+            {% for recommend in recommend_list %}
+                    <div class="good">
+                        <a href="/goods/details/{{ recommend.id }}">
+                            <img src="{{recommend.getImgUrl}}" width="285px" height="285px">
+                            <p class="name">{{ recommend.gname }}</p>
+                            <div class="price">
+                                <i>￥</i>
+                                <p class="big">{{ recommend.price }}</p>
+                                <s>￥{{ recommend.oldprice }}</s>
+                            </div>
+                            <div class="sale">
+                                特卖
+                            </div>
+                        </a>
+                    </div>
+        {% endfor %}
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+        <script>
+        $('.MinImg').click(function () {
+            $('.MinImg').removeClass('active')
+            $(this).addClass('active')
+            $('#rightimg').attr('src',$(this).children('img').attr('src'))
+        })
+        $('.size-item').click(function () {
+             $('.size-item').removeClass('active')
+            $(this).addClass('active')
+        })
+        $('.jian').click(function () {
+
+           num_text_view = $('.num').children('input[type="number"]')
+           val=$(num_text_view).val()
+            if(val <=1)return
+            $(num_text_view).val(val-1)
+        })
+        $('.jia').click(function () {
+              <!--发给服务器问一下这个商品(商品+颜色+尺寸)还有没有货-->
+            num_text_view = $('.num').children('input[type="number"]')
+            val=eval($(num_text_view).val())
+            if (val>=60)return
+             $(num_text_view).val(val+1)
+
+        })
+        //单独购买
+        //<input type="hidden" name="colorid" value=""/>
+        function goCart() {
+
+            //<li class="MinImgactive" colorid="11"></li>
+            $('form').children('input[name="colorid"]').val($('.MinImg.active').attr('colorid'))
+            $('form').children('input[name="sizeid"]').val($('.size-item.active').attr('sizeid'))
+            $('form').children('input[name="count"]').val($('.num').children('input[type="number"]').val())
+        }
+    </script>
+{% endblock %}

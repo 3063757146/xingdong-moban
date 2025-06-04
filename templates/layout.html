@@ -1,0 +1,79 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %}</title>
+{#放前面 防止与后面冲突#}
+<link rel="stylesheet" href="{% static 'plugins/bootstrap-3.4.1/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/font-awesome-4.7.0/css/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'css/detail.css' %}">
+    <link rel="stylesheet" href="{% static 'css/carts.css' %}">
+    <link rel="stylesheet" href="{% static 'css/reset.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mygxin.css' %}">
+
+    {% block css %}
+
+    {% endblock %}
+</head>
+<body>
+<div class="head">
+    <div class="head-in">
+        <ul class="options">
+            <li class="sub"><a href="http://127.0.0.1:8000/?category=2#">我的订单</a></li>
+            <li class="sub"><a href="http://127.0.0.1:8000/?category=2#">客户服务</a></li>
+            <li class="sub"><a href="http://127.0.0.1:8000/cart/cart.html">我的购物车</a></li>
+        </ul>
+            {% if request.session.info %}
+{#                已经登录#}
+                <div class="register">欢迎 <a href="#" style="color: red">{{ request.session.info.uname }}</a></div>
+         {% else %}
+                <div class="register"><a href="/user/register/">免费注册</a></div>
+                <div class="sign"><a href="/user/login/">登录</a></div>
+        {% endif %}
+
+    </div>
+</div>
+<div class="search">
+    <ul class="items">
+        <li class="item">
+            <a href="http://127.0.0.1:8000/?category=2#">
+                <img src="{% static 'images/1_09.png' %}" alt="">
+                <p>10:00开抢</p>
+            </a>
+        </li>
+        <li class="item">
+            <a href="http://127.0.0.1:8000/?category=2#">
+                <img src="{% static 'images/1_11.png' %}" alt="">
+
+                <p>买手砍价</p>
+            </a>
+        </li>
+        <li class="item">
+            <a href="http://127.0.0.1:8000/?category=2#">
+                <img src="{% static 'images/1_13.png' %}" alt="">
+                <p>验货质检</p>
+            </a>
+        </li>
+    </ul>
+    <div class="input">
+        <input type="" name="" value="请输入想找的宝贝">
+        <img src="{% static 'images/1_06.png' %}" alt="">
+    </div>
+</div>
+   {% block main %}
+
+    {% endblock %}
+
+    <script src="{% static 'js/jquery-3.6.0.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-3.4.1/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/carts.js' %}"></script>
+
+    {% block js %}
+
+    {% endblock %}
+
+</body>
+</html>

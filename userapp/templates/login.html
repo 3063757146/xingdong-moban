@@ -1,0 +1,67 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}用户登录页面{% endblock %}
+
+
+{% block main %}
+     <div class="login-body">
+        <div class="login-card">
+            <div class="login-top">
+                <h3>用户登录</h3>
+                <h5>尊敬的用户，欢迎您回来！</h5>
+            </div>
+            <div class="login-bottom">
+                  <form method="post" novalidate>
+                    {% csrf_token %}
+            <div class="login-input-box">
+
+                <div class="form-group">
+                    {{ form.uname }}
+{#                    ★★★★★名字别写错  写错了没东西#}
+                    <span style="color:red">{{ form.uname.errors }}</span>
+                </div>
+                <div class="form-group">
+                    {{ form.pwd }}
+                    <span style="color:red">{{ form.pwd.errors }}</span>
+                </div>
+             <div class="form-group">
+            <div class="row">
+                <div class="col-xs-7">
+                    {{ form.code }}
+                    <span style="color: red;">{{ form.code.errors }}</span>
+                </div>
+                <div class="col-xs-5">
+{#                          此处图片 以前端url形式给到#}
+                    <img id="image_code" src="/user/code/" style="width: 125px;" alt="哈哈" onclick="changeCode(this)">
+                </div>
+            </div>
+
+        </div>
+                <button class="login-btn" style="color: white;text-decoration: none;cursor: pointer">登录</button>
+            </div>
+
+                  </form>
+                <div class="login-img">
+                    <img src="/static/images/login_05.png" alt="">
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+       //点击验证码图片切换验证码
+        function changeCode(obj){
+            $(obj).attr('src','/user/code/?r=asd'+new Date().getTime());
+                                //在原url后面随便加上一个？随机数即可
+        }
+    </script>
+{% endblock %}
+
+
+
+
+

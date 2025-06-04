@@ -1,0 +1,45 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}用户注册页面{% endblock %}
+
+
+{% block main %}
+
+
+     <div class="login-body">
+        <div class="login-card">
+            <div class="login-top">
+                <h3>新用户注册</h3>
+                <h5>尊敬的用户，欢迎您回来！</h5>
+            </div>
+            <div class="login-bottom">
+                  <form method="post" novalidate>
+                    {% csrf_token %}
+            <div class="login-input-box">
+
+                <div class="form-group">
+                    {{ form.uname }}
+{#                    ★★★★★名字别写错  写错了没东西#}
+                    <span style="color:red">{{ form.uname.errors }}</span>
+                </div>
+                <div class="form-group">
+                    {{ form.pwd }}
+                    <span style="color:red">{{ form.pwd.errors }}</span>
+                </div>
+                    <button class="login-btn" style="color: white;text-decoration: none;cursor: pointer">注册</button>
+            </div>
+                  </form>
+                <div class="login-img">
+                    <img src="/static/images/login_05.png" alt="">
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+
+
+
+
