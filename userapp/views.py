@@ -5,7 +5,7 @@ from xarray.util.generate_ops import inplace
 
 from userapp import models
 from django import forms
-
+import  jsonpickle
 from userapp.models import Address
 from utils.forms import BootstrapForm,BootstrapModelForm
 from django.core.validators import RegexValidator
@@ -45,8 +45,11 @@ def register(request):
     form = RegisterForm(data=request.POST)
     if form.is_valid():
         request.session.set_expiry(60 * 60 * 24 * 7)  # 7天免登录
-        request.session["info"]={"uname":form.cleaned_data['uname']}
-        form.save()
+        user=form.save()
+        request.session["info"]={"uname":form.cleaned_data['uname'],
+                                 "userid":user.id}
+        request.session['user'] = jsonpickle.dumps(user)
+
         return redirect("/user/center/") #跳转账户中心
     return render(request, 'register.html', {"form": form})
 
@@ -83,7 +86,9 @@ def login(request):
         code = request.session["code"]
         if code_input == code:  # 验证成功
             request.session.set_expiry(60 * 60 * 24 * 7)  # 7天免登录
-            request.session["info"] = { "uname": userobj.uname}
+            request.session["info"] = { "uname": userobj.uname,"userid":userobj.id}
+            request.session['user'] = jsonpickle.dumps(userobj)
+
             # return redirect("/admin/list")
             return render(request, "center.html")
         form.add_error("code", "验证码错误")  # ⭐在view加error方法

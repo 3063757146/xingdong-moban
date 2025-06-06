@@ -8,6 +8,7 @@ urlpatterns = [
     path("",include("userapp.urls")),
 
     path("",include("cartapp.urls")),
+    path("",include("orderapp.urls")),
 #     将项目下的url拆分到各app下 只需要在各app下添加url
 ]
 
