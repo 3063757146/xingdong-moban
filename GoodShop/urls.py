@@ -4,11 +4,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
-   path("",include("goodapp.urls")),
     path("",include("userapp.urls")),
 
-    path("",include("cartapp.urls")),
-    path("",include("orderapp.urls")),
+
 #     将项目下的url拆分到各app下 只需要在各app下添加url
 ]
 

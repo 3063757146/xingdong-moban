@@ -9,12 +9,5 @@ urlpatterns = [
     path("user/center/", views.center),
     path("user/logout/", views.logout),
     path("user/code/",views.user_code),
-    path("user/address/",views.address),
-
-    path("user/loadArea/",views.loadArea),
-    path("user/updateDefaultAddr/",views.updateDefaultAddrView),
-    path("user/addrdelete/",views.addrdelete),
-
-    path("user/addredit/",views.addredit)
 
 ]

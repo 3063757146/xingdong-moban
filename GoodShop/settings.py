@@ -37,10 +37,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "goodapp.apps.GoodappConfig",
     "userapp.apps.UserappConfig",
-    "cartapp.apps.CartappConfig",
-    "orderapp.apps.OrderappConfig"
+
 ]
 
 MIDDLEWARE = [
@@ -80,7 +78,7 @@ WSGI_APPLICATION = "GoodShop.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'shop',  # 数据库名字
+        'NAME': 'xingdong',  # 数据库名字
         'USER': 'root',
         'PASSWORD': 'liu021003',
         'HOST': '127.0.0.1',  # 那台机器安装了MySQL

@@ -17,19 +17,10 @@ class Area(models.Model):
 class UserInfo(models.Model):
     uname = models.CharField(max_length=100,verbose_name="用户名")
     pwd = models.CharField(max_length=100,verbose_name="密码")
-
+    score=models.IntegerField(default=100,verbose_name="用户积分")
+    email=models.CharField(max_length=25,default="default@163.com",verbose_name="邮箱")
 
     def __str__(self):
         return self.uname
 
 
-class Address(models.Model):
-    aname = models.CharField(max_length=30,verbose_name="收货人")
-    aphone = models.CharField(max_length=11,verbose_name="电话")
-    addr = models.CharField(max_length=100,verbose_name="详细地址")
-    isdefault = models.BooleanField(default=False)
-    userinfo = models.ForeignKey(UserInfo,on_delete=models.CASCADE)
-
-
-    def __str__(self):
-        return self.aname

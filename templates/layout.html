@@ -22,9 +22,7 @@
 <div class="head">
     <div class="head-in">
         <ul class="options">
-            <li class="sub"><a href="/order/list/">我的订单</a></li>
-            <li class="sub"><a href="/goods/list/">商城首页</a></li>
-            <li class="sub"><a href="/cart/list/">我的购物车</a></li>
+            <li class="sub"><a href="/">xxx</a></li>
         </ul>
             {% if request.session.info %}
 {#                已经登录#}
@@ -34,33 +32,6 @@
                 <div class="sign"><a href="/user/login/">登录</a></div>
         {% endif %}
 
-    </div>
-</div>
-<div class="search">
-    <ul class="items">
-        <li class="item">
-            <a href="http://127.0.0.1:8000/?category=2#">
-                <img src="{% static 'images/1_09.png' %}" alt="">
-                <p>10:00开抢</p>
-            </a>
-        </li>
-        <li class="item">
-            <a href="http://127.0.0.1:8000/?category=2#">
-                <img src="{% static 'images/1_11.png' %}" alt="">
-
-                <p>买手砍价</p>
-            </a>
-        </li>
-        <li class="item">
-            <a href="http://127.0.0.1:8000/?category=2#">
-                <img src="{% static 'images/1_13.png' %}" alt="">
-                <p>验货质检</p>
-            </a>
-        </li>
-    </ul>
-    <div class="input">
-        <input type="" name="" value="请输入想找的宝贝">
-        <img src="{% static 'images/1_06.png' %}" alt="">
     </div>
 </div>
    {% block main %}

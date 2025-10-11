@@ -3,10 +3,10 @@ from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from xarray.util.generate_ops import inplace
 
+import  re
 from userapp import models
 from django import forms
 import  jsonpickle
-from userapp.models import Address
 from utils.forms import BootstrapForm,BootstrapModelForm
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
@@ -16,27 +16,42 @@ from utils.code import check_code
 from io import BytesIO
 from django.core.serializers import serialize
 
-
 class RegisterForm(BootstrapModelForm):
     uname = forms.CharField(widget=forms.TextInput(), label="用户名", required=True)
-    pwd = forms.CharField(widget=forms.PasswordInput(render_value=True)
-                               , label="密码", required=True)  # required表示前端不填会验证失败
+    pwd = forms.CharField(widget=forms.PasswordInput(render_value=True), label="密码", required=True)
+    confirm_pwd = forms.CharField(widget=forms.PasswordInput(render_value=True), label="确认密码", required=True)
+    email = forms.CharField(widget=forms.EmailInput(), label="邮箱", required=True)
+
     class Meta:
         model = models.UserInfo
-        fields = "__all__"
+        fields = ['uname', 'pwd', 'email']  # 确认密码不进入模型
+
     def clean_uname(self):
         uname = self.cleaned_data['uname']
-        ifexist=models.UserInfo.objects.filter(uname=uname).exists()
-        if ifexist:
+        if models.UserInfo.objects.filter(uname=uname).exists():
             raise ValidationError("用户名已经存在")
         return uname
 
     def clean_pwd(self):
-        pwd=self.cleaned_data.get("pwd")
+        pwd = self.cleaned_data.get("pwd")
         if len(pwd) < 6:
             raise ValidationError("密码必须大于等于六位")
         return md5(pwd)
 
+    def clean_confirm_pwd(self):
+        """两次密码一致性比对"""
+        pwd = self.cleaned_data.get("pwd")        # 已加密的 md5 值
+        confirm = self.cleaned_data.get("confirm_pwd")
+        if pwd != md5(confirm):
+            raise ValidationError("两次密码输入不一致")
+        return confirm
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            raise ValidationError("邮箱格式不正确（例：user@example.com）")
+        if models.UserInfo.objects.filter(email=email).exists():
+            raise ValidationError("该邮箱已被注册")
+        return email
 
 def register(request):
     if request.method == 'GET':
@@ -44,6 +59,7 @@ def register(request):
         return render(request,"register.html",{'form':form})
     form = RegisterForm(data=request.POST)
     if form.is_valid():
+
         request.session.set_expiry(60 * 60 * 24 * 7)  # 7天免登录
         user=form.save()
         request.session["info"]={"uname":form.cleaned_data['uname'],
@@ -55,8 +71,12 @@ def register(request):
 
 
 def center(request):
-    # 账户中心
-    return render(request,"center.html")
+    user_id = request.session.get("info", {}).get("userid")
+    if not user_id:
+        return redirect("/user/login/")
+
+    user = models.UserInfo.objects.get(id=user_id)   # 拿到完整用户
+    return render(request, "center.html", {"user": user})
 
 
 
@@ -90,7 +110,7 @@ def login(request):
             request.session['user'] = jsonpickle.dumps(userobj)
 
             # return redirect("/admin/list")
-            return render(request, "center.html")
+            return redirect("/user/center/") #跳转账户中心
         form.add_error("code", "验证码错误")  # ⭐在view加error方法
     return render(request, 'login.html', {"form": form})
 
@@ -106,86 +126,3 @@ def user_code(request):
 def logout(request):
     request.session.clear()
     return redirect("/user/login/")
-
-class AddressForm(BootstrapModelForm):
-    aname = forms.CharField(widget=forms.TextInput(),label="收货人",required=True)
-    aphone = forms.CharField(widget=forms.TextInput()
-                               ,label="手机号",required=True) #required表示前端不填会验证失败
-    class Meta:
-        model = models.Address
-        fields = ["aname","aphone","addr"]
-
-@csrf_exempt
-
-def address(request):
-    uname = request.session["info"]["uname"]
-    user = models.UserInfo.objects.get(uname=uname)
-    addr_list=models.Address.objects.filter(userinfo=user)
-    if request.method == 'GET':
-        form=AddressForm()
-        return render(request,"address.html",{'form':form,"addr_list":addr_list})
-    form=AddressForm(data=request.POST)
-    if form.is_valid():
-        aname=form.cleaned_data.get("aname")
-        aphone=form.cleaned_data.get("aphone")
-        addr=form.cleaned_data.get("addr")
-        # 同时只有一个isdefault=true
-        models.Address.objects.create(aname=aname,aphone=aphone,addr=addr,userinfo=user,isdefault=(lambda count:True if count==0 else False)(user.address_set.count()))
-        return JsonResponse({"status": True})
-    return JsonResponse({"status": False,"error":form.errors})
-
-def loadArea(request):
-    pid = request.GET.get('pid', -1)
-    pid = int(pid)
-    areaList = models.Area.objects.filter(parentid=pid)
-    jareaList = serialize('json',areaList)
-
-    res={"status":True,"jareaList":jareaList}
-
-    return JsonResponse(res)
-
-
-def updateDefaultAddrView(request):
-    #获取请求参数
-    addrid = request.GET.get('addrid',-1)
-    addrid = int(addrid)
-    #修改数据 设置id的默认为true 其他的都置为false
-    Address.objects.filter(id=addrid).update(isdefault=True)
-    Address.objects.exclude(id=addrid).update(isdefault=False)
-
-    return HttpResponseRedirect('/user/address/')
-
-def addrdelete(request):
-    print("delete")
-    addrid = request.GET.get('addrid',-1)
-    addrid = int(addrid)
-    Address.objects.filter(id=addrid).delete()
-    return HttpResponseRedirect('/user/address/')
-
-
-
-class AddressEditForm(BootstrapModelForm):
-    aname = forms.CharField(widget=forms.TextInput(),label="收货人",required=True)
-    aphone = forms.CharField(widget=forms.TextInput()
-                               ,label="手机号",required=True) #required表示前端不填会验证失败
-    class Meta:
-        model = models.Address
-        fields = ["aname","aphone","addr"]
-
-
-@csrf_exempt
-def addredit(request):
-    addrid = request.GET.get('addrid')
-    uname = request.session["info"]["uname"]
-    user = models.UserInfo.objects.get(uname=uname)
-    print("------------",addrid)
-    form = AddressForm(data=request.POST)
-    if form.is_valid():
-        aname = form.cleaned_data.get("aname")
-        aphone = form.cleaned_data.get("aphone")
-        addr = form.cleaned_data.get("addr")
-        print("修改----------------")
-        # 同时只有一个isdefault=true
-        Address.objects.filter(id=addrid).update(aname=aname,aphone=aphone,addr=addr,userinfo=user,isdefault=(lambda count:True if count==0 else False)(user.address_set.count()))
-        return JsonResponse({"status": True})
-    return JsonResponse({"status": False, "error": form.errors})

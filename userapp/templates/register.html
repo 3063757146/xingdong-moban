@@ -27,6 +27,16 @@
                     {{ form.pwd }}
                     <span style="color:red">{{ form.pwd.errors }}</span>
                 </div>
+                <!-- 新增确认密码 -->
+                <div class="form-group">
+                    {{ form.confirm_pwd }}
+                    <span style="color:red">{{ form.confirm_pwd.errors }}</span>
+                </div>
+                <!-- 放在确认密码下面即可 -->
+                <div class="form-group">
+                    {{ form.email }}
+                    <span style="color:red">{{ form.email.errors }}</span>
+                </div>
                     <button class="login-btn" style="color: white;text-decoration: none;cursor: pointer">注册</button>
             </div>
                   </form>

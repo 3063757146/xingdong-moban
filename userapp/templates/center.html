@@ -27,9 +27,6 @@
                         <li><a href="http://127.0.0.1:8000/user/usercenter/#">我的订单</a></li>
                     </ul>
                     <ul>
-                        <li><a href="/user/address/">地址管理</a></li>
-                    </ul>
-                    <ul>
                         <li><a href="/goods/list/">回到首页</a></li>
                     </ul>
 
@@ -44,25 +41,18 @@
                         <p class="fl"><span>{{ request.session.info.uname }}</span><a href="http://127.0.0.1:8000/user/usercenter/#">修改个人信息&gt;</a>
                         </p>
                     </div>
-                    <div class="fr">绑定邮箱：12****4@**.com</div>
-                </div>
-                <div class="bott">
-                    <div class="clearfix">
-                        <a href="http://127.0.0.1:8000/user/usercenter/#" class="fl"><img
-                                src="/static/images/gxin1.jpg"></a>
-                        <p class="fl"><span>待支付的订单：<strong>0</strong></span>
-                            <a href="http://127.0.0.1:8000/user/usercenter/#">查看待支付订单&gt;</a>
-                        </p>
-                    </div>
-                    <div class="clearfix">
-                        <a href="http://127.0.0.1:8000/user/usercenter/#" class="fl"><img
-                                src="/static/images/gxin2.jpg"></a>
-                        <p class="fl"><span>待收货的订单：<strong>0</strong></span>
-                            <a href="http://127.0.0.1:8000/user/usercenter/#">查看待收货订单&gt;</a>
-                        </p>
+                    <!-- 原来那行绑定邮箱改成下面卡片 -->
+                    <div class="fr user-info-card">
+                        <div class="info-item">
+                            <i class="icon-email"></i>
+                            <span>绑定邮箱：{{ user.email|default:"未绑定" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="icon-coin"></i>
+                            <span>当前积分：<strong class="score">{{ user.score|default:0 }}</strong></span>
+                        </div>
                     </div>
                 </div>
-
             </div>
 
         </div>
