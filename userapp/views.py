@@ -186,9 +186,17 @@ def alipay_qrcode(request):
         return JsonResponse({"code": 401, "msg": "请先登录"})
     
     try:
+        # 获取充值金额，默认1元
+        amount = float(request.GET.get('amount', 1))
+        
+        # 验证金额范围
+        if amount < 1:
+            return JsonResponse({"code": 400, "msg": "充值金额不能少于1元"})
+        if amount > 10000:
+            return JsonResponse({"code": 400, "msg": "单次充值金额不能超过10000元"})
+        
         out_trade_no = str(uuid.uuid4()).replace("-", "")
-        amount = 0.1  # 0.1 元
-        score = 10   # 送 10 积分
+        score = int(amount * 10)  # 1元=10积分
         
         # 创建订单
         order = models.RechargeOrder.objects.create(
@@ -357,123 +365,3 @@ def alipay_notify(request):
     
     print("=" * 50)
 
-
-@csrf_exempt
-def manual_check_payment(request):
-    """手动检查支付状态（测试用）"""
-    if request.method == "POST":
-        oid = request.POST.get("oid")
-        if not oid:
-            return JsonResponse({"code": 400, "msg": "缺少订单ID"})
-        
-        try:
-            order = models.RechargeOrder.objects.get(id=oid)
-            print(f"手动检查订单: {order.id}, 订单号: {order.out_trade_no}")
-            
-            # 查询支付宝状态
-            from .utils.alipay_utils import query_trade_status
-            trade_result = query_trade_status(order.out_trade_no)
-            print(f"支付宝查询结果: {trade_result}")
-            
-            if trade_result and trade_result.get("trade_status") in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
-                # 更新订单状态
-                order.status = 1
-                order.save()
-                
-                # 增加用户积分
-                user = order.user
-                user.score += order.score
-                user.save()
-                
-                return JsonResponse({
-                    "code": 0, 
-                    "msg": "支付成功，积分已到账",
-                    "trade_result": trade_result
-                })
-            else:
-                return JsonResponse({
-                    "code": 1, 
-                    "msg": "支付未成功",
-                    "trade_result": trade_result
-                })
-                
-        except models.RechargeOrder.DoesNotExist:
-            return JsonResponse({"code": 404, "msg": "订单不存在"})
-        except Exception as e:
-            return JsonResponse({"code": 500, "msg": f"查询失败: {str(e)}"})
-    
-    return JsonResponse({"code": 400, "msg": "请使用POST方法"})
-
-
-def payment_test_page(request):
-    """支付测试页面"""
-    return render(request, "payment_test.html")
-
-
-@csrf_exempt
-@transaction.atomic
-def simulate_pay(request):
-    """模拟支付成功（仅用于测试）"""
-    if request.method != "POST":
-        return JsonResponse({"code": 400, "msg": "请求方法错误"})
-    
-    oid = request.POST.get("oid")
-    if not oid:
-        return JsonResponse({"code": 400, "msg": "缺少订单ID"})
-    
-    try:
-        order = models.RechargeOrder.objects.select_for_update().get(id=oid)
-        if order.status == 0:
-            order.status = 1
-            order.pay_time = datetime.datetime.now()
-            order.save()
-            
-            # 到账积分
-            user = order.user
-            user.score += order.score
-            user.save()
-            
-            print(f"[测试] 模拟支付成功 - 订单:{order.id}, 用户:{user.uname}, 积分+{order.score}")
-            return JsonResponse({"code": 0, "msg": "支付成功"})
-        else:
-            return JsonResponse({"code": 400, "msg": "订单已处理"})
-    except models.RechargeOrder.DoesNotExist:
-        return JsonResponse({"code": 404, "msg": "订单不存在"})
-    except Exception as e:
-        print(f"[测试] 模拟支付失败: {e}")
-        return JsonResponse({"code": 500, "msg": str(e)})
-
-
-@csrf_exempt
-@transaction.atomic
-def test_pay(request):
-    """测试支付（直接创建订单并到账，跳过支付宝）"""
-    if request.method != "POST":
-        return JsonResponse({"code": 400, "msg": "请求方法错误"})
-    
-    user_info = request.session.get("info")
-    if not user_info:
-        return JsonResponse({"code": 401, "msg": "请先登录"})
-    
-    try:
-        # 创建订单
-        out_trade_no = "TEST" + str(uuid.uuid4()).replace("-", "")
-        order = models.RechargeOrder.objects.create(
-            user_id=user_info["userid"],
-            out_trade_no=out_trade_no,
-            amount=0.1,
-            score=10,
-            status=1,  # 直接标记为已支付
-            pay_time=datetime.datetime.now()
-        )
-        
-        # 直接到账积分
-        user = order.user
-        user.score += order.score
-        user.save()
-        
-        print(f"[测试] 测试支付成功 - 订单:{order.id}, 用户:{user.uname}, 积分+{order.score}")
-        return JsonResponse({"code": 0, "msg": "测试支付成功"})
-    except Exception as e:
-        print(f"[测试] 测试支付失败: {e}")
-        return JsonResponse({"code": 500, "msg": str(e)})

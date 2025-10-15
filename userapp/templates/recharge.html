@@ -26,6 +26,70 @@
     margin-bottom: 25px;
 }
 
+.amount-input-section {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.amount-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.amount-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0;
+    transition: all 0.3s ease;
+}
+
+.amount-input-group:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.amount-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 16px 18px;
+    font-size: 16px;
+    color: #374151;
+    outline: none;
+}
+
+.amount-input::placeholder {
+    color: #9ca3af;
+}
+
+.amount-unit {
+    padding: 0 18px;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.amount-preview {
+    margin-top: 10px;
+    text-align: center;
+}
+
+#pointsPreview {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+    font-size: 14px;
+}
+
 .pay-btn {
     background: linear-gradient(45deg, #667eea, #764ba2);
     color: white;
@@ -117,11 +181,155 @@
     color: #52c41a !important;
     font-weight: bold;
 }
+
+/* 支付成功弹窗样式 */
+.payment-success-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.success-modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: successModalIn 0.5s ease-out;
+}
+
+@keyframes successModalIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-50px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.success-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(45deg, #52c41a, #73d13d);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    color: white;
+    animation: successIconPulse 1s ease-in-out;
+}
+
+@keyframes successIconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.success-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.success-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.success-details {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.success-detail-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.success-detail-label {
+    color: #666;
+}
+
+.success-detail-value {
+    color: #333;
+    font-weight: 600;
+}
+
+.countdown-timer {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    display: inline-block;
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+/* 烟花效果 */
+.fireworks {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.firework {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    animation: firework 1s ease-out forwards;
+}
+
+@keyframes firework {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0;
+    }
+}
 </style>
 
 <div class="recharge-box">
     <div class="recharge-title">积分充值</div>
-    <div class="recharge-amount">0.1 元 = 10 积分</div>
+    <div class="recharge-amount">1 元 = 10 积分</div>
+    
+    <div class="amount-input-section">
+        <label for="amountInput" class="amount-label">充值金额（元）</label>
+        <div class="amount-input-group">
+            <input type="number" id="amountInput" class="amount-input" placeholder="请输入充值金额" min="1" step="0.01" value="1">
+            <span class="amount-unit">元</span>
+        </div>
+        <div class="amount-preview">
+            <span id="pointsPreview">预计获得：10 积分</span>
+        </div>
+    </div>
+    
     <button id="btnPay" class="pay-btn">立即充值</button>
     
     <div id="qrcode" style="display:none;" class="qrcode-container">
@@ -130,13 +338,44 @@
         <p id="amount" class="amount-display">支付金额：¥0.10</p>
         
         <div id="web-pay" class="web-pay-section">
-            <a id="webPayLink" href="#" target="_blank" class="web-pay-btn" style="display:none;">
+            <!-- <a id="webPayLink" href="#" target="_blank" class="web-pay-btn" style="display:none;">
                 💻 电脑端支付（推荐）
-            </a>
-            <p class="help-text">或使用支付宝APP扫码</p>
+            </a> -->
+            <p class="help-text">使用支付宝APP扫码</p>
         </div>
     </div>
 </div>
+
+<!-- 支付成功弹窗 -->
+<div id="paymentSuccessModal" class="payment-success-modal">
+    <div class="success-modal-content">
+        <div class="success-icon">✓</div>
+        <div class="success-title">支付成功！</div>
+        <div class="success-subtitle">恭喜您，积分已到账</div>
+        
+        <div class="success-details">
+            <div class="success-detail-item">
+                <span class="success-detail-label">支付金额：</span>
+                <span class="success-detail-value">¥1.00</span>
+            </div>
+            <div class="success-detail-item">
+                <span class="success-detail-label">获得积分：</span>
+                <span class="success-detail-value">10 积分</span>
+            </div>
+            <!-- <div class="success-detail-item">
+                <span class="success-detail-label">订单号：</span>
+                <span class="success-detail-value" id="successOrderNo">-</span>
+            </div> -->
+        </div>
+        
+        <div class="countdown-timer" id="countdownTimer">
+            5秒后自动返回用户中心
+        </div>
+    </div>
+</div>
+
+<!-- 烟花效果容器 -->
+<div id="fireworks" class="fireworks"></div>
 
 <!-- 引入 qrcodejs 库（本地优先，CDN 备用） -->
 <script src="/static/js/qrcode.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'"></script>
@@ -144,12 +383,38 @@
 <script>
 $(document).ready(function(){
     let currentTimer = null;
+    let currentAmount = 1;
+    
+    // 金额输入实时预览
+    $('#amountInput').on('input', function(){
+        const amount = parseFloat($(this).val()) || 0;
+        currentAmount = amount;
+        const points = Math.floor(amount * 10); // 1元=10积分
+        $('#pointsPreview').text(`预计获得：${points} 积分`);
+        
+        // 验证金额
+        if (amount < 1) {
+            $('#btnPay').prop('disabled', true);
+            $('#pointsPreview').text('最低充值金额：1元');
+        } else if (amount > 10000) {
+            $('#btnPay').prop('disabled', true);
+            $('#pointsPreview').text('单次充值不能超过10000元');
+        } else {
+            $('#btnPay').prop('disabled', false);
+        }
+    });
     
     $('#btnPay').off('click').on('click', function(){
+        const amount = parseFloat($('#amountInput').val()) || 1;
+        if (amount < 1) {
+            showMessage('请输入有效的充值金额', 'error');
+            return;
+        }
+        
         let $btn = $(this);
         $btn.prop('disabled', true).text('🔄 生成中...');
         
-        $.getJSON("{% url 'alipay_qrcode' %}", function(res){
+        $.getJSON("{% url 'alipay_qrcode' %}", {amount: amount}, function(res){
             if(res.code !== 0){
                 showMessage(res.msg, 'error');
                 $btn.prop('disabled', false).text('立即充值');
@@ -173,15 +438,19 @@ $(document).ready(function(){
                 $('#qrcode').show();
                 $btn.text('✅ 已生成支付');
                 
+                // 更新支付金额显示
+                $('#amount').text(`支付金额：¥${amount.toFixed(2)}`);
+                
                 console.log('支付链接:', res.qr);
                 console.log('订单ID:', res.oid);
+                console.log('支付金额:', amount);
                 
                 // 如果有网页支付链接，显示按钮
-                if(res.web_url) {
-                    console.log('网页支付链接:', res.web_url);
-                    $('#webPayLink').attr('href', res.web_url).show();
-                    $('#msg').text('方式1：点击下方按钮在网页支付');
-                }
+                // if(res.web_url) {
+                //     console.log('网页支付链接:', res.web_url);
+                //     $('#webPayLink').attr('href', res.web_url).show();
+                //     // $('#msg').text('点击下方按钮在网页支付');
+                // }
                 
             } catch(e) {
                 console.error('二维码生成失败:', e);
@@ -202,12 +471,12 @@ $(document).ready(function(){
                         clearInterval(currentTimer);
                         $('#msg').text('🎉 支付成功！').addClass('success-message');
                         $btn.text('✅ 支付成功');
-                        setTimeout(function(){
-                            showMessage('充值成功！积分已到账', 'success');
-                            setTimeout(function(){
-                                location.reload();
-                            }, 1500);
-                        }, 500);
+                        
+                        // 显示支付成功弹窗
+                        showPaymentSuccessModal(oid, amount);
+                        
+                        // 启动烟花效果
+                        createFireworks();
                     }
                 }).fail(function(){
                     console.log('查询订单状态失败');
@@ -258,6 +527,70 @@ $(document).ready(function(){
             toast.css('opacity', 0);
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+    
+    // 显示支付成功弹窗
+    function showPaymentSuccessModal(oid, amount) {
+        // 设置订单号
+        // $('#successOrderNo').text(oid);
+        
+        // 更新支付金额和积分
+        const points = Math.floor(amount * 10); // 1元=10积分
+        $('#paymentSuccessModal .success-detail-value').eq(0).text(`¥${amount.toFixed(2)}`);
+        $('#paymentSuccessModal .success-detail-value').eq(1).text(`${points} 积分`);
+        
+        // 显示弹窗
+        $('#paymentSuccessModal').css('display', 'flex');
+        
+        // 启动倒计时
+        let countdown = 5;
+        const timerElement = $('#countdownTimer');
+        
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                timerElement.text(`${countdown}秒后自动返回用户中心`);
+            } else {
+                clearInterval(countdownInterval);
+                timerElement.text('正在跳转...');
+                
+                // 跳转到用户中心
+                setTimeout(() => {
+                    window.location.href = '/user/center/';
+                }, 500);
+            }
+        }, 1000);
+    }
+    
+    // 创建烟花效果
+    function createFireworks() {
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3'];
+        const fireworks = $('#fireworks');
+        
+        // 清除之前的烟花
+        fireworks.empty();
+        
+        // 创建多个烟花
+        for (let i = 0; i < 20; i++) {
+            setTimeout(() => {
+                const firework = $('<div class="firework"></div>');
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                firework.css({
+                    'background-color': color,
+                    'left': Math.random() * 100 + '%',
+                    'top': Math.random() * 100 + '%',
+                    'animation-delay': Math.random() * 0.5 + 's'
+                });
+                
+                fireworks.append(firework);
+                
+                // 1秒后移除烟花元素
+                setTimeout(() => {
+                    firework.remove();
+                }, 1000);
+            }, i * 50);
+        }
     }
 });
 </script>
