@@ -15,6 +15,10 @@ from django import forms
 from utils.code import check_code
 from io import BytesIO
 from django.core.serializers import serialize
+import uuid
+import datetime
+from django.conf import settings
+from django.db import transaction
 
 class RegisterForm(BootstrapModelForm):
     uname = forms.CharField(widget=forms.TextInput(), label="用户名", required=True)
@@ -126,3 +130,236 @@ def user_code(request):
 def logout(request):
     request.session.clear()
     return redirect("/user/login/")
+
+
+# ==================== 支付宝支付功能 ====================
+# 延迟初始化 alipay SDK（避免启动时密钥文件不存在报错）
+_alipay = None
+_alipay_appid = None  # 记录当前初始化的 AppID
+
+def get_alipay():
+    """获取支付宝 SDK 实例，支持配置热更新"""
+    global _alipay, _alipay_appid
+    
+    current_appid = settings.ALIPAY["appid"]
+    
+    # 如果 AppID 变化了，重新初始化
+    if _alipay is None or _alipay_appid != current_appid:
+        try:
+            from alipay import AliPay
+            print(f"[支付宝] 初始化 SDK - AppID: {current_appid}, Debug: {settings.ALIPAY['debug']}")
+            _alipay = AliPay(
+                appid=current_appid,
+                app_notify_url=settings.ALIPAY["notify_url"],
+                app_private_key_string=open(settings.ALIPAY["private_key_path"]).read(),
+                alipay_public_key_string=open(settings.ALIPAY["public_key_path"]).read(),
+                sign_type="RSA2",
+                debug=settings.ALIPAY["debug"]
+            )
+            _alipay_appid = current_appid
+            print(f"[支付宝] SDK 初始化成功")
+        except Exception as e:
+            print(f"[支付宝] SDK 初始化失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    return _alipay
+
+
+def recharge_page(request):
+    """充值弹窗页，单独模板"""
+    return render(request, "recharge.html")
+
+
+def alipay_qrcode(request):
+    """下单并返回二维码地址"""
+    user = request.session.get("info")
+    if not user:
+        return JsonResponse({"code": 401, "msg": "请先登录"})
+    
+    alipay = get_alipay()
+    if not alipay:
+        return JsonResponse({"code": 500, "msg": "支付功能未配置，请检查密钥文件"})
+    
+    out_trade_no = str(uuid.uuid4()).replace("-", "")
+    amount = 0.1  # 0.1 元
+    score = 10   # 送 10 积分
+    
+    # 创建订单
+    order = models.RechargeOrder.objects.create(
+        user_id=user["userid"],
+        out_trade_no=out_trade_no,
+        amount=amount,
+        score=score
+    )
+    
+    # 调用支付宝当面付（生成二维码）
+    try:
+        result = alipay.api_alipay_trade_precreate(
+            subject="GoodShop-积分充值",
+            out_trade_no=out_trade_no,
+            total_amount=str(amount)
+        )
+        
+        # 打印完整返回结果用于调试
+        print(f"支付宝返回结果: {result}")
+        
+        # 检查返回结果
+        if isinstance(result, dict):
+            # 检查是否有错误
+            if "code" in result and result["code"] != "10000":
+                error_msg = result.get("msg", "未知错误") + " - " + result.get("sub_msg", "")
+                print(f"支付宝接口错误: {error_msg}")
+                return JsonResponse({"code": 500, "msg": f"支付宝接口错误: {error_msg}"})
+            
+            # 获取二维码
+            qr = result.get("qr_code")
+            if not qr:
+                print(f"未找到二维码，完整响应: {result}")
+                return JsonResponse({"code": 500, "msg": "获取二维码失败，请查看后台日志"})
+            
+            # 同时生成网页支付链接（方便电脑端测试）
+            # 使用 alipay.trade.page.pay 生成网页支付链接
+            try:
+                # 生成网页支付URL
+                page_pay_url = alipay.api_alipay_trade_page_pay(
+                    subject="GoodShop-积分充值",
+                    out_trade_no=out_trade_no,
+                    total_amount=str(amount),
+                    return_url=settings.ALIPAY.get("return_url", "http://127.0.0.1:8000/user/center/")
+                )
+                # 拼接完整URL
+                if settings.ALIPAY["debug"]:
+                    web_url = "https://openapi.alipaydev.com/gateway.do?" + page_pay_url
+                else:
+                    web_url = "https://openapi.alipay.com/gateway.do?" + page_pay_url
+                
+                print(f"网页支付链接: {web_url}")
+                return JsonResponse({"code": 0, "qr": qr, "web_url": web_url, "oid": order.id})
+            except:
+                # 如果网页支付生成失败，只返回二维码
+                return JsonResponse({"code": 0, "qr": qr, "oid": order.id})
+        else:
+            return JsonResponse({"code": 500, "msg": f"支付宝返回格式错误: {type(result)}"})
+            
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"支付宝接口调用异常:\n{error_detail}")
+        return JsonResponse({"code": 500, "msg": f"支付宝接口调用失败: {str(e)}"})
+
+
+def query_order(request, oid):
+    """前端轮询支付结果"""
+    try:
+        order = models.RechargeOrder.objects.get(id=oid)
+        return JsonResponse({"status": order.status})
+    except models.RechargeOrder.DoesNotExist:
+        return JsonResponse({"status": -1, "msg": "订单不存在"})
+
+
+@csrf_exempt
+@transaction.atomic
+def alipay_notify(request):
+    """支付宝异步 POST 通知"""
+    if request.method != "POST":
+        return HttpResponse("fail")
+    
+    alipay = get_alipay()
+    if not alipay:
+        return HttpResponse("fail")
+    
+    data = {k: request.POST[k] for k in request.POST.keys()}
+    sign = data.pop("sign", None)
+    
+    # 验证签名
+    if not alipay.verify(data, sign):
+        return HttpResponse("fail")
+    
+    out_trade_no = data.get("out_trade_no")
+    trade_status = data.get("trade_status")
+    
+    if trade_status == "TRADE_SUCCESS":
+        try:
+            order = models.RechargeOrder.objects.select_for_update().get(out_trade_no=out_trade_no)
+            if order.status == 0:
+                order.status = 1
+                order.pay_time = datetime.datetime.now()
+                order.save()
+                # 到账积分
+                user = order.user
+                user.score += order.score
+                user.save()
+        except models.RechargeOrder.DoesNotExist:
+            return HttpResponse("fail")
+    
+    return HttpResponse("success")
+
+
+@csrf_exempt
+@transaction.atomic
+def simulate_pay(request):
+    """模拟支付成功（仅用于测试）"""
+    if request.method != "POST":
+        return JsonResponse({"code": 400, "msg": "请求方法错误"})
+    
+    oid = request.POST.get("oid")
+    if not oid:
+        return JsonResponse({"code": 400, "msg": "缺少订单ID"})
+    
+    try:
+        order = models.RechargeOrder.objects.select_for_update().get(id=oid)
+        if order.status == 0:
+            order.status = 1
+            order.pay_time = datetime.datetime.now()
+            order.save()
+            
+            # 到账积分
+            user = order.user
+            user.score += order.score
+            user.save()
+            
+            print(f"[测试] 模拟支付成功 - 订单:{order.id}, 用户:{user.uname}, 积分+{order.score}")
+            return JsonResponse({"code": 0, "msg": "支付成功"})
+        else:
+            return JsonResponse({"code": 400, "msg": "订单已处理"})
+    except models.RechargeOrder.DoesNotExist:
+        return JsonResponse({"code": 404, "msg": "订单不存在"})
+    except Exception as e:
+        print(f"[测试] 模拟支付失败: {e}")
+        return JsonResponse({"code": 500, "msg": str(e)})
+
+
+@csrf_exempt
+@transaction.atomic
+def test_pay(request):
+    """测试支付（直接创建订单并到账，跳过支付宝）"""
+    if request.method != "POST":
+        return JsonResponse({"code": 400, "msg": "请求方法错误"})
+    
+    user_info = request.session.get("info")
+    if not user_info:
+        return JsonResponse({"code": 401, "msg": "请先登录"})
+    
+    try:
+        # 创建订单
+        out_trade_no = "TEST" + str(uuid.uuid4()).replace("-", "")
+        order = models.RechargeOrder.objects.create(
+            user_id=user_info["userid"],
+            out_trade_no=out_trade_no,
+            amount=0.1,
+            score=10,
+            status=1,  # 直接标记为已支付
+            pay_time=datetime.datetime.now()
+        )
+        
+        # 直接到账积分
+        user = order.user
+        user.score += order.score
+        user.save()
+        
+        print(f"[测试] 测试支付成功 - 订单:{order.id}, 用户:{user.uname}, 积分+{order.score}")
+        return JsonResponse({"code": 0, "msg": "测试支付成功"})
+    except Exception as e:
+        print(f"[测试] 测试支付失败: {e}")
+        return JsonResponse({"code": 500, "msg": str(e)})

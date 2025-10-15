@@ -10,26 +10,40 @@
     <div class="Bott">
         <div class="wrapper clearfix" style="margin: 0 auto">
             <div class="zuo fl" style="margin-left: 100px">
-                <h3>
-                    <a href="http://127.0.0.1:8000/">
-                        <img src="/static/images/tx.png"></a>
-                    <p class="clearfix">
-                        <span class="fl">{{ request.session.info.uname }}</span>
-                        <span class="fr logout">
-                                <a href="/user/logout/">
-                                [退出登录]
+                <div class="user-profile-card">
+                    <div class="profile-header">
+                        <div class="avatar-container">
+                            <img src="/static/images/tx.png" alt="用户头像" class="user-avatar-img">
+                            <div class="avatar-badge">
+                                <i class="fa fa-check"></i>
+                            </div>
+                        </div>
+                        <h3 class="user-name">{{ request.session.info.uname }}</h3>
+                        <p class="user-status">活跃用户</p>
+                    </div>
+                    
+                    <div class="profile-menu">
+                        <ul class="menu-list">
+                            <li class="menu-item">
+                                <a href="/user/center/" class="menu-link">
+                                    <i class="fa fa-user"></i>
+                                    <span>个人中心</span>
                                 </a>
-                            </span>
-                    </p>
-                </h3>
-                <div>
-                    <ul>
-                        <li><a href="http://127.0.0.1:8000/user/usercenter/#">我的订单</a></li>
-                    </ul>
-                    <ul>
-                        <li><a href="/goods/list/">回到首页</a></li>
-                    </ul>
-
+                            </li>
+                            <li class="menu-item">
+                                <a href="#" class="menu-link">
+                                    <i class="fa fa-file-text-o"></i>
+                                    <span>我的订单</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a href="/" class="menu-link">
+                                    <i class="fa fa-home"></i>
+                                    <span>回到首页</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="you fl">
@@ -50,6 +64,7 @@
                         <div class="info-item">
                             <i class="icon-coin"></i>
                             <span>当前积分：<strong class="score">{{ user.score|default:0 }}</strong></span>
+                            <a href="#recharge" class="am-btn am-btn-xs am-btn-warning" data-am-modal="{target:'#recharge-modal'}" style="margin-left:10px">充值</a>
                         </div>
                     </div>
                 </div>
@@ -58,7 +73,206 @@
         </div>
     </div>
 
+    <!-- 充值弹窗 -->
+    <div class="am-modal am-modal-no-btn" tabindex="-1" id="recharge-modal">
+        <div class="am-modal-dialog">
+            <div class="am-modal-hd">积分充值
+                <a href="javascript: void(0)" class="am-close am-close-spin" data-am-modal-close>&times;</a>
+            </div>
+            <div class="am-modal-bd">
+                {% include 'recharge_test.html' %}
+            </div>
+        </div>
+    </div>
+
 {% endblock %}
+
+{% block css %}
+<style>
+/* 用户中心页面样式 */
+.user-profile-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    padding: 30px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.user-profile-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.avatar-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+.user-avatar-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 4px solid #667eea;
+    object-fit: cover;
+}
+
+.avatar-badge {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid white;
+}
+
+.avatar-badge i {
+    color: white;
+    font-size: 12px;
+}
+
+.user-name {
+    color: #333;
+    font-size: 24px;
+    font-weight: bold;
+    margin: 10px 0 5px 0;
+}
+
+.user-status {
+    color: #667eea;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.profile-menu {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 20px;
+}
+
+.menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-item {
+    margin-bottom: 10px;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    text-decoration: none;
+    color: #666;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.menu-link:hover {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    transform: translateX(5px);
+}
+
+.menu-link i {
+    margin-right: 15px;
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+/* 积分卡片样式优化 */
+.user-info-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 25px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 0;
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+.info-item i {
+    margin-right: 12px;
+    font-size: 18px;
+    color: #ffd700;
+    width: 20px;
+}
+
+.info-item span {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.score {
+    font-size: 24px !important;
+    font-weight: bold !important;
+    color: #ffd700 !important;
+}
+
+/* 充值按钮优化 */
+.am-btn-warning {
+    background: linear-gradient(45deg, #ffd700, #ffed4e) !important;
+    border: none !important;
+    color: #333 !important;
+    font-weight: bold !important;
+    padding: 8px 16px !important;
+    border-radius: 20px !important;
+    transition: all 0.3s ease !important;
+}
+
+.am-btn-warning:hover {
+    background: linear-gradient(45deg, #ffed4e, #ffd700) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4) !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .user-profile-card {
+        padding: 20px;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    .user-name {
+        font-size: 20px;
+    }
+    
+    .user-avatar-img {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .menu-link {
+        padding: 12px 15px;
+    }
+}
+</style>
+{% endblock %}
+
 {% block js %}
 
 {% endblock %}

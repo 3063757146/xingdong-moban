@@ -129,3 +129,34 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # 媒体文件的 URL 前缀
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR,'media')
+
+# 支付宝配置 - 支持沙箱/正式环境一键切换
+# 环境变量控制：ALIPAY_ENV=prod 走正式，ALIPAY_ENV=sandbox 或不设置走沙箱
+ALIPAY_ENV = os.getenv("ALIPAY_ENV", "sandbox").lower()
+
+# 正式环境配置
+PROD_ALIPAY = {
+    "appid": "2021005197630133",  # 正式应用 APPID
+    "notify_url": "https://你的正式域名/user/alipay_notify/",  # 必须 HTTPS 且外网能访问
+    "return_url": "https://你的正式域名/user/center/",  # 支付完成跳转地址
+    "private_key_path": os.path.join(BASE_DIR, "keys/prod_app_private_key.pem"),
+    "public_key_path":  os.path.join(BASE_DIR, "keys/prod_alipay_public_key.pem"),
+    "debug": False,  # 正式环境
+}
+
+# 沙箱环境配置
+SANDBOX_ALIPAY = {
+    "appid": "9021000149644414",  # 沙箱 APPID
+    "notify_url": "http://127.0.0.1:8000/user/alipay_notify/",  # 本地测试地址
+    "return_url": "http://127.0.0.1:8000/user/center/",  # 支付完成跳转地址
+    "private_key_path": os.path.join(BASE_DIR, "keys/my_private_key.txt"),
+    "public_key_path":  os.path.join(BASE_DIR, "keys/alipay_public_key.txt"),
+    "debug": True,   # 沙箱环境
+}
+
+# 根据环境变量选择配置
+ALIPAY = PROD_ALIPAY if ALIPAY_ENV == "prod" else SANDBOX_ALIPAY
+
+# 日志记录当前环境（方便排查）
+print(f"[支付宝环境] 当前运行在: {'正式环境' if ALIPAY_ENV == 'prod' else '沙箱环境'}")
+print(f"[支付宝环境] AppID: {ALIPAY['appid']}")

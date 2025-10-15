@@ -99,12 +99,35 @@ GoodShop/
   - 用户信息展示
   - 用户积分系统（默认100积分）
   - Session 验证保护
+  - 积分充值功能
 
 - **用户登出**
   - 清除 Session 信息
   - 重定向到登录页
 
-### 2. 数据模型
+### 2. 支付功能模块（支付宝当面付）
+- **积分充值**
+  - 1元充值10积分
+  - 二维码扫码支付
+  - 实时轮询支付状态
+  - 支付成功自动到账
+  - 订单记录管理
+  
+- **支付流程**
+  - 用户点击充值按钮
+  - 弹窗展示支付二维码
+  - 支付宝扫码支付
+  - 前端轮询订单状态
+  - 支付成功后积分实时到账
+  - 页面自动刷新显示新积分
+  
+- **安全保障**
+  - RSA2 签名验证
+  - 订单唯一性校验
+  - 事务处理防重复到账
+  - CSRF 豁免（仅异步通知接口）
+
+### 3. 数据模型
 
 #### UserInfo (用户信息表)
 - `id`: 主键（自增）
@@ -120,7 +143,17 @@ GoodShop/
 - `arealevel`: 地区层级
 - `status`: 状态
 
-### 3. 辅助功能
+#### RechargeOrder (充值订单表)
+- `id`: 主键（自增）
+- `user`: 用户外键（关联 UserInfo）
+- `out_trade_no`: 商户订单号（唯一，UUID格式）
+- `amount`: 充值金额（最大10位，2位小数）
+- `score`: 赠送积分（整数）
+- `status`: 订单状态（0-待支付，1-已支付，2-已关闭）
+- `create_time`: 创建时间（自动记录）
+- `pay_time`: 支付时间（可为空）
+
+### 4. 辅助功能
 - **表单验证**: 基于 Django Forms 的自定义验证
 - **图形验证码**: 动态生成验证码图片
 - **密码加密**: MD5 加密算法
@@ -151,6 +184,12 @@ DATABASES = {
 - `/user/center/` - 用户中心
 - `/user/logout/` - 用户登出
 - `/user/code/` - 验证码图片
+
+### 支付模块路由
+- `/user/recharge/` - 充值页面（弹窗模板）
+- `/user/alipay_qrcode/` - 获取支付二维码接口（返回JSON）
+- `/user/query_order/<oid>/` - 轮询订单状态接口
+- `/user/alipay_notify/` - 支付宝异步通知回调
 
 ### 管理后台
 - `/admin/` - Django Admin 管理后台
@@ -183,18 +222,92 @@ DATABASES = {
 1. **清晰的项目结构**: 模块化设计，易于维护和扩展
 2. **完善的用户系统**: 注册、登录、认证、积分等功能完备
 3. **现代化前端**: 响应式设计，良好的用户体验
-4. **安全性考虑**: 密码加密、验证码、Session 管理等安全措施
+4. **安全性考虑**: 密码加密、验证码、Session 管理、支付签名验证等安全措施
 5. **可扩展性强**: 采用 Django 应用模块化设计，便于添加新功能
+6. **完整的支付闭环**: 支付宝当面付集成，从下单到到账全流程自动化
 
 ## 开发环境配置
 
+### 基础环境
 1. 安装 Python 3.x
 2. 安装 MySQL 数据库
-3. 安装项目依赖（需要创建 requirements.txt）
-4. 配置数据库连接
-5. 执行数据库迁移
-6. 运行开发服务器
+3. 安装项目依赖：
+   ```bash
+   pip install django==4.2.16
+   pip install pymysql
+   pip install pillow
+   pip install jsonpickle
+   pip install python-alipay-sdk
+   ```
+
+### 数据库配置
+1. 创建数据库：
+   ```sql
+   CREATE DATABASE xingdong CHARACTER SET utf8mb4;
+   ```
+2. 修改 `GoodShop/settings.py` 中的数据库配置
+3. 执行迁移：
+   ```bash
+   python manage.py makemigrations
+   python manage.py migrate
+   ```
+
+### 支付宝配置
+
+#### 沙箱环境（开发测试）
+1. 访问 [支付宝开放平台沙箱](https://open.alipay.com/develop/sandbox/app)
+2. 获取沙箱 AppID 和密钥（详见 `keys/README.md`）
+3. 将应用私钥和支付宝公钥放到 `keys/` 目录
+4. 本地开发需配置内网穿透（ngrok）以接收异步通知
+
+#### 正式环境（生产部署）
+1. 准备正式应用密钥（详见 `PRODUCTION_DEPLOYMENT.md`）
+2. 修改 `settings.py` 中的正式域名（HTTPS）
+3. 在支付宝后台签约「当面付」产品
+4. 设置环境变量启动：
+   ```bash
+   ALIPAY_ENV=prod python manage.py runserver
+   ```
+
+#### 环境切换
+- **默认运行沙箱**：不设置环境变量
+- **切换到正式**：`ALIPAY_ENV=prod`
+- **回滚到沙箱**：`unset ALIPAY_ENV` 或 `ALIPAY_ENV=sandbox`
+
+### 运行项目
+```bash
+python manage.py runserver
+```
+
+访问 http://127.0.0.1:8000/user/login/ 即可开始使用
 
 
 根据项目文件结构和样式文件判断，以下功能可能正在开发或计划开发：
-- 支付功能 (way01.jpg, way02.jpg, way03.jpg)
+- 商品列表和详情展示 (proList.css, detail.css)
+- 购物车功能 (carts.css, carts.js)
+- 收货地址管理 (peraddressbg.png)
+- 个人信息管理 (personal.css)
+- 订单管理系统
+- 商品分类和搜索
+
+## 支付功能使用说明
+
+### 充值流程
+1. 登录系统进入用户中心
+2. 点击积分旁的「充值」按钮
+3. 弹窗显示充值金额和二维码
+4. 使用支付宝扫码支付（沙箱环境使用沙箱买家账号）
+5. 支付成功后页面自动刷新，积分实时到账
+
+### 测试说明
+- **沙箱环境**: 默认使用支付宝沙箱环境进行测试
+- **测试金额**: 固定为 1 元充值 10 积分
+- **测试账号**: 使用支付宝沙箱提供的买家账号
+- **注意事项**: 异步通知需要外网可访问地址，本地开发需使用内网穿透工具
+
+### 正式环境部署
+1. 申请正式支付宝应用并签约「当面付」产品
+2. 更换正式环境的 AppID 和密钥
+3. 修改 `settings.py` 中 `ALIPAY["debug"]` 为 `False`
+4. 配置正式域名的 `notify_url` 和 `return_url`
+5. 根据业务需求调整充值金额和积分比例

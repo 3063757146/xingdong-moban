@@ -1,0 +1,96 @@
+{% load static %}
+<div class="recharge-box" style="width:350px;margin:20px auto;text-align:center">
+    <h4>0.1 元充 10 积分</h4>
+    <button id="btnPay" class="am-btn am-btn-danger">立即充值</button>
+    <div id="qrcode" style="display:none;margin-top:15px">
+        <div id="qrcode-container" style="margin:0 auto;width:200px;height:200px;"></div>
+        <p id="msg" style="margin-top:10px;color:#666;">请使用支付宝扫码支付</p>
+        <p id="amount" style="color:#ff6600;font-weight:bold;">支付金额：¥0.10</p>
+        <div id="web-pay" style="margin-top:15px;">
+            <a id="webPayLink" href="#" target="_blank" class="am-btn am-btn-sm am-btn-success" style="display:none;">
+                电脑端支付（推荐）
+            </a>
+            <p style="font-size:12px;color:#999;margin-top:5px;">或使用支付宝APP扫码</p>
+        </div>
+    </div>
+</div>
+
+<!-- 引入 qrcodejs 库（本地优先，CDN 备用） -->
+<script src="/static/js/qrcode.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'"></script>
+<script src="/static/js/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+    let currentTimer = null;
+    
+    $('#btnPay').off('click').on('click', function(){
+        let $btn = $(this);
+        $btn.prop('disabled', true).text('生成中...');
+        
+        $.getJSON("{% url 'alipay_qrcode' %}", function(res){
+            if(res.code !== 0){
+                alert(res.msg);
+                $btn.prop('disabled', false).text('立即充值');
+                return;
+            }
+            
+            // 清空之前的二维码
+            $('#qrcode-container').empty();
+            
+            // 使用 qrcodejs 生成二维码
+            try {
+                new QRCode(document.getElementById("qrcode-container"), {
+                    text: res.qr,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                $('#qrcode').show();
+                $btn.text('已生成支付');
+                
+                console.log('支付链接:', res.qr);
+                console.log('订单ID:', res.oid);
+                
+                // 如果有网页支付链接，显示按钮
+                if(res.web_url) {
+                    console.log('网页支付链接:', res.web_url);
+                    $('#webPayLink').attr('href', res.web_url).show();
+                    $('#msg').text('方式1：点击下方按钮在网页支付');
+                }
+                
+            } catch(e) {
+                console.error('二维码生成失败:', e);
+                alert('二维码生成失败，请刷新重试');
+                $btn.prop('disabled', false).text('立即充值');
+                return;
+            }
+            
+            // 轮询支付结果
+            let oid = res.oid;
+            if (currentTimer) {
+                clearInterval(currentTimer);
+            }
+            
+            currentTimer = setInterval(function(){
+                $.getJSON('/user/query_order/' + oid + '/', function(r){
+                    if(r.status === 1){
+                        clearInterval(currentTimer);
+                        $('#msg').text('支付成功！').css('color', '#52c41a');
+                        setTimeout(function(){
+                            alert('充值成功！积分已到账');
+                            location.reload();
+                        }, 500);
+                    }
+                });
+            }, 1500);
+            
+        }).fail(function(){
+            alert('网络错误，请重试');
+            $btn.prop('disabled', false).text('立即充值');
+        });
+    });
+});
+</script>
+
