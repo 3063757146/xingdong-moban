@@ -3,52 +3,341 @@
 
 {% block title %}用户登录页面{% endblock %}
 
+{% block css %}
+<style>
+/* 登录页面美化样式 */
+.login-body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-body::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
+    animation: float 20s infinite linear;
+}
+
+@keyframes float {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 450px;
+    padding: 50px 40px;
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    height: auto;          /* 允许自动增高 */
+    min-height: 0;         /* 去掉最小高度限制 */
+    overflow: visible;     /* 让内容完全显示 */
+}
+.code-input-group {
+    align-items: center;   /* 去掉 flex-start 造成的顶部裁剪 */
+}
+.code-image {
+    flex: 0 0 120px;      /* 与图片原始宽度完全一致 */
+    height: 45px;         /* 与图片原始高度完全一致 */
+    line-height: 0;
+    overflow: hidden;     /* 防止多 1px 白边 */
+}
+#image_code {
+    width: 120px !important;  /* 强制原始尺寸 */
+    height: 35px !important;
+    object-fit: none;         /* 禁止任何缩放/裁剪 */
+    border: none;
+}
+/* 标题区域 */
+.login-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.login-header h3 {
+    font-size: 28px;
+    font-weight: bold;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 8px 0;
+    padding: 0;
+    line-height: 1.2;
+}
+
+.login-header h5 {
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 400;
+    margin: 0;
+    padding: 0;
+    line-height: 1.4;
+}
+
+/* 表单区域 */
+.login-form {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.form-group {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+    padding-left: 4px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 16px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    color: #374151;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.form-group input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+/* 验证码输入组 */
+.code-input-group {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.code-input {
+    flex: 1;
+}
+
+.code-image {
+    flex: 0 0 auto;
+}
+
+#image_code {
+    width: 120px;
+    height: 45px;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    object-fit: cover;
+}
+
+#image_code:hover {
+    border-color: #667eea;
+    transform: scale(1.02);
+}
+
+/* 提交按钮 */
+.submit-btn {
+    width: 100%;
+    padding: 16px 20px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 24px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.submit-btn:hover::before {
+    left: 100%;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+}
+
+.submit-btn:active {
+    transform: translateY(-1px);
+}
+
+.submit-btn i {
+    font-size: 16px;
+}
+
+/* 错误信息 */
+.error-message {
+    display: block;
+    color: #ef4444;
+    font-size: 13px;
+    margin-top: 6px;
+    padding-left: 4px;
+    line-height: 1.3;
+}
+
+/* 底部链接 */
+.login-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.login-footer p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.login-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.login-footer a:hover {
+    color: #5a67d8;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .login-card {
+        margin: 20px;
+        padding: 40px 30px;
+    }
+    
+    .login-top h3 {
+        font-size: 28px;
+    }
+    
+    .form-group input {
+        padding: 16px 18px 16px 45px;
+        font-size: 15px;
+    }
+    
+    .row {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #image_code {
+        width: 100px;
+    }
+}
+
+/* 隐藏原来的图片 */
+.login-img {
+    display: none;
+}
+</style>
+{% endblock %}
 
 {% block main %}
-     <div class="login-body">
-        <div class="login-card">
-            <div class="login-top">
-                <h3>用户登录</h3>
-                <h5>尊敬的用户，欢迎您回来！</h5>
-            </div>
-            <div class="login-bottom">
-                  <form method="post" novalidate>
-                    {% csrf_token %}
-            <div class="login-input-box">
-
-                <div class="form-group">
-                    {{ form.uname }}
-{#                    ★★★★★名字别写错  写错了没东西#}
-                    <span style="color:red">{{ form.uname.errors }}</span>
-                </div>
-                <div class="form-group">
-                    {{ form.pwd }}
-                    <span style="color:red">{{ form.pwd.errors }}</span>
-                </div>
-             <div class="form-group">
-            <div class="row">
-                <div class="col-xs-7">
-                    {{ form.code }}
-                    <span style="color: red;">{{ form.code.errors }}</span>
-                </div>
-                <div class="col-xs-5">
-{#                          此处图片 以前端url形式给到#}
-                    <img id="image_code" src="/user/code/" style="width: 125px;" alt="哈哈" onclick="changeCode(this)">
-                </div>
-            </div>
-
+<div class="login-body">
+    <div class="login-card">
+        <!-- 标题区域 -->
+        <div class="login-header">
+            <h3>欢迎回来</h3>
+            <h5>登录您的AI生图平台账户</h5>
         </div>
-                <button class="login-btn" style="color: white;text-decoration: none;cursor: pointer">登录</button>
+        
+        <!-- 表单区域 -->
+        <form method="post" novalidate class="login-form">
+            {% csrf_token %}
+            
+            <!-- 用户名输入框 -->
+            <div class="form-group">
+                <span class="form-label">用户名</span>
+                {{ form.uname }}
+                <span class="error-message">{{ form.uname.errors }}</span>
             </div>
-
-                  </form>
-                <div class="login-img">
-                    <img src="/static/images/login_05.png" alt="">
+            
+            <!-- 密码输入框 -->
+            <div class="form-group">
+                <span class="form-label">密码</span>
+                {{ form.pwd }}
+                <span class="error-message">{{ form.pwd.errors }}</span>
+            </div>
+            
+            <!-- 验证码输入框 -->
+            <div class="form-group">
+                <span class="form-label">验证码</span>
+                <div class="code-input-group">
+                    <div class="code-input">
+                        {{ form.code }}
+                    </div>
+                    <div class="code-image">
+                        <img id="image_code" src="/user/code/" alt="验证码" onclick="changeCode(this)">
+                    </div>
                 </div>
+                <span class="error-message">{{ form.code.errors }}</span>
             </div>
+            
+            <!-- 登录按钮 -->
+            <button type="submit" class="submit-btn">
+                <i class="fa fa-sign-in"></i>
+                立即登录
+            </button>
+        </form>
+        
+        <!-- 底部链接 -->
+        <div class="login-footer">
+            <p>还没有账户？<a href="/user/register/">立即注册</a></p>
         </div>
     </div>
-
+</div>
 {% endblock %}
 
 {% block js %}

@@ -1,16 +1,139 @@
 {% load static %}
-<div class="recharge-box" style="width:350px;margin:20px auto;text-align:center">
-    <h4>0.1 元充 10 积分</h4>
-    <button id="btnPay" class="am-btn am-btn-danger">立即充值</button>
-    <div id="qrcode" style="display:none;margin-top:15px">
-        <div id="qrcode-container" style="margin:0 auto;width:200px;height:200px;"></div>
-        <p id="msg" style="margin-top:10px;color:#666;">请使用支付宝扫码支付</p>
-        <p id="amount" style="color:#ff6600;font-weight:bold;">支付金额：¥0.10</p>
-        <div id="web-pay" style="margin-top:15px;">
-            <a id="webPayLink" href="#" target="_blank" class="am-btn am-btn-sm am-btn-success" style="display:none;">
-                电脑端支付（推荐）
+<style>
+.recharge-box {
+    width: 400px;
+    margin: 20px auto;
+    text-align: center;
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.recharge-title {
+    font-size: 24px;
+    font-weight: bold;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px;
+}
+
+.recharge-amount {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 25px;
+}
+
+.pay-btn {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 15px 40px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.pay-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.pay-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.qrcode-container {
+    margin-top: 25px;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 15px;
+    border: 2px solid #e2e8f0;
+}
+
+#qrcode-container {
+    margin: 0 auto;
+    width: 200px;
+    height: 200px;
+    background: white;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.qr-message {
+    margin-top: 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+.amount-display {
+    color: #ff6600;
+    font-weight: bold;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.web-pay-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.web-pay-btn {
+    background: linear-gradient(45deg, #52c41a, #73d13d);
+    color: white;
+    text-decoration: none;
+    border-radius: 20px;
+    padding: 10px 25px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(82, 196, 26, 0.3);
+}
+
+.web-pay-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(82, 196, 26, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.help-text {
+    font-size: 12px;
+    color: #999;
+    margin-top: 8px;
+}
+
+.success-message {
+    color: #52c41a !important;
+    font-weight: bold;
+}
+</style>
+
+<div class="recharge-box">
+    <div class="recharge-title">积分充值</div>
+    <div class="recharge-amount">0.1 元 = 10 积分</div>
+    <button id="btnPay" class="pay-btn">立即充值</button>
+    
+    <div id="qrcode" style="display:none;" class="qrcode-container">
+        <div id="qrcode-container"></div>
+        <p id="msg" class="qr-message">请使用支付宝扫码支付</p>
+        <p id="amount" class="amount-display">支付金额：¥0.10</p>
+        
+        <div id="web-pay" class="web-pay-section">
+            <a id="webPayLink" href="#" target="_blank" class="web-pay-btn" style="display:none;">
+                💻 电脑端支付（推荐）
             </a>
-            <p style="font-size:12px;color:#999;margin-top:5px;">或使用支付宝APP扫码</p>
+            <p class="help-text">或使用支付宝APP扫码</p>
         </div>
     </div>
 </div>
@@ -24,11 +147,11 @@ $(document).ready(function(){
     
     $('#btnPay').off('click').on('click', function(){
         let $btn = $(this);
-        $btn.prop('disabled', true).text('生成中...');
+        $btn.prop('disabled', true).text('🔄 生成中...');
         
         $.getJSON("{% url 'alipay_qrcode' %}", function(res){
             if(res.code !== 0){
-                alert(res.msg);
+                showMessage(res.msg, 'error');
                 $btn.prop('disabled', false).text('立即充值');
                 return;
             }
@@ -48,7 +171,7 @@ $(document).ready(function(){
                 });
                 
                 $('#qrcode').show();
-                $btn.text('已生成支付');
+                $btn.text('✅ 已生成支付');
                 
                 console.log('支付链接:', res.qr);
                 console.log('订单ID:', res.oid);
@@ -62,7 +185,7 @@ $(document).ready(function(){
                 
             } catch(e) {
                 console.error('二维码生成失败:', e);
-                alert('二维码生成失败，请刷新重试');
+                showMessage('二维码生成失败，请刷新重试', 'error');
                 $btn.prop('disabled', false).text('立即充值');
                 return;
             }
@@ -77,20 +200,65 @@ $(document).ready(function(){
                 $.getJSON('/user/query_order/' + oid + '/', function(r){
                     if(r.status === 1){
                         clearInterval(currentTimer);
-                        $('#msg').text('支付成功！').css('color', '#52c41a');
+                        $('#msg').text('🎉 支付成功！').addClass('success-message');
+                        $btn.text('✅ 支付成功');
                         setTimeout(function(){
-                            alert('充值成功！积分已到账');
-                            location.reload();
+                            showMessage('充值成功！积分已到账', 'success');
+                            setTimeout(function(){
+                                location.reload();
+                            }, 1500);
                         }, 500);
                     }
+                }).fail(function(){
+                    console.log('查询订单状态失败');
                 });
             }, 1500);
             
         }).fail(function(){
-            alert('网络错误，请重试');
+            showMessage('网络错误，请重试', 'error');
             $btn.prop('disabled', false).text('立即充值');
         });
     });
+    
+    // 消息提示函数
+    function showMessage(msg, type) {
+        const colors = {
+            'success': '#52c41a',
+            'error': '#ff4d4f',
+            'info': '#1890ff'
+        };
+        
+        // 创建提示框
+        const toast = $(`
+            <div style="
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${colors[type] || colors.info};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 9999;
+                font-size: 14px;
+                font-weight: 500;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            ">${msg}</div>
+        `);
+        
+        $('body').append(toast);
+        
+        // 显示动画
+        setTimeout(() => toast.css('opacity', 1), 100);
+        
+        // 自动隐藏
+        setTimeout(() => {
+            toast.css('opacity', 0);
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 });
 </script>
 

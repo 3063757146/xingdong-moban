@@ -137,6 +137,7 @@ ALIPAY_ENV = os.getenv("ALIPAY_ENV", "sandbox").lower()
 # 正式环境配置
 PROD_ALIPAY = {
     "appid": "2021005197630133",  # 正式应用 APPID
+    "gateway": "https://openapi.alipay.com/gateway.do",  # 正式网关
     "notify_url": "https://你的正式域名/user/alipay_notify/",  # 必须 HTTPS 且外网能访问
     "return_url": "https://你的正式域名/user/center/",  # 支付完成跳转地址
     "private_key_path": os.path.join(BASE_DIR, "keys/prod_app_private_key.pem"),
@@ -147,6 +148,7 @@ PROD_ALIPAY = {
 # 沙箱环境配置
 SANDBOX_ALIPAY = {
     "appid": "9021000149644414",  # 沙箱 APPID
+    "gateway": "https://openapi.alipaydev.com/gateway.do",  # 沙箱网关
     "notify_url": "http://127.0.0.1:8000/user/alipay_notify/",  # 本地测试地址
     "return_url": "http://127.0.0.1:8000/user/center/",  # 支付完成跳转地址
     "private_key_path": os.path.join(BASE_DIR, "keys/my_private_key.txt"),

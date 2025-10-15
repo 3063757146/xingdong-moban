@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>支付测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 20px 0; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>支付状态测试工具</h1>
+        
+        <div class="form-group">
+            <label for="oid">订单ID:</label>
+            <input type="number" id="oid" placeholder="请输入订单ID">
+        </div>
+        
+        <button onclick="checkPayment()">检查支付状态</button>
+        <button onclick="checkLatestOrder()">检查最新订单</button>
+        
+        <div id="result"></div>
+        
+        <h2>最近订单列表</h2>
+        <div id="orderList"></div>
+    </div>
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script>
+        function checkPayment() {
+            const oid = document.getElementById('oid').value;
+            if (!oid) {
+                showResult('请输入订单ID', 'error');
+                return;
+            }
+            
+            $.post('/user/manual_check/', {oid: oid}, function(data) {
+                if (data.code === 0) {
+                    showResult('✅ ' + data.msg, 'success');
+                    showResult('支付宝返回: ' + JSON.stringify(data.trade_result, null, 2), 'info');
+                } else {
+                    showResult('❌ ' + data.msg, 'error');
+                    if (data.trade_result) {
+                        showResult('支付宝返回: ' + JSON.stringify(data.trade_result, null, 2), 'info');
+                    }
+                }
+            }).fail(function() {
+                showResult('网络错误', 'error');
+            });
+        }
+        
+        function checkLatestOrder() {
+            // 这里我们需要先获取最新的订单ID
+            // 可以通过查询数据库或者从页面获取
+            showResult('请手动输入最新的订单ID', 'info');
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML += '<div class="result ' + type + '">' + message + '</div>';
+        }
+        
+        // 页面加载时获取最近订单
+        $(document).ready(function() {
+            // 这里可以添加获取最近订单列表的功能
+        });
+    </script>
+</body>
+</html>

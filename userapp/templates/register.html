@@ -3,50 +3,367 @@
 
 {% block title %}用户注册页面{% endblock %}
 
+{% block css %}
+<style>
+/* 注册页面美化样式 */
+.login-body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-body::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
+    animation: float 20s infinite linear;
+}
+
+@keyframes float {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 480px;
+    padding: 50px 40px;
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    height: auto;          /* 允许自动增高 */
+    min-height: 0;         /* 去掉最小高度限制 */
+    overflow: visible;     /* 让内容完全显示 */
+}
+
+/* 标题区域 */
+.login-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.login-header h3 {
+    font-size: 28px;
+    font-weight: bold;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 8px 0;
+    padding: 0;
+    line-height: 1.2;
+}
+
+.login-header h5 {
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 400;
+    margin: 0;
+    padding: 0;
+    line-height: 1.4;
+}
+
+/* 表单区域 */
+.login-form {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.form-group {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+    padding-left: 4px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 16px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    color: #374151;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.form-group input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+/* 提交按钮 */
+.submit-btn {
+    width: 100%;
+    padding: 16px 20px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 24px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.submit-btn:hover::before {
+    left: 100%;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+}
+
+.submit-btn:active {
+    transform: translateY(-1px);
+}
+
+.submit-btn i {
+    font-size: 16px;
+}
+
+/* 错误信息 */
+.error-message {
+    display: block;
+    color: #ef4444;
+    font-size: 13px;
+    margin-top: 6px;
+    padding-left: 4px;
+    line-height: 1.3;
+}
+
+/* 底部链接 */
+.login-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.login-footer p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.login-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.login-footer a:hover {
+    color: #5a67d8;
+}
+
+/* 密码强度提示 */
+.password-strength {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.strength-bar {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    margin-top: 5px;
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.strength-weak { background: #ef4444; width: 25%; }
+.strength-medium { background: #f59e0b; width: 50%; }
+.strength-strong { background: #10b981; width: 75%; }
+.strength-very-strong { background: #059669; width: 100%; }
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .login-card {
+        margin: 20px;
+        padding: 40px 30px;
+        max-width: 100%;
+    }
+    
+    .login-top h3 {
+        font-size: 28px;
+    }
+    
+    .form-group input {
+        padding: 16px 18px 16px 45px;
+        font-size: 15px;
+    }
+}
+
+/* 隐藏原来的图片 */
+.login-img {
+    display: none;
+}
+</style>
+{% endblock %}
 
 {% block main %}
-
-
-     <div class="login-body">
-        <div class="login-card">
-            <div class="login-top">
-                <h3>新用户注册</h3>
-                <h5>尊敬的用户，欢迎您回来！</h5>
+<div class="login-body">
+    <div class="login-card">
+        <!-- 标题区域 -->
+        <div class="login-header">
+            <h3>加入我们</h3>
+            <h5>创建您的AI生图平台账户</h5>
+        </div>
+        
+        <!-- 表单区域 -->
+        <form method="post" novalidate class="login-form">
+            {% csrf_token %}
+            
+            <!-- 用户名输入框 -->
+            <div class="form-group">
+                <span class="form-label">用户名</span>
+                {{ form.uname }}
+                <span class="error-message">{{ form.uname.errors }}</span>
             </div>
-            <div class="login-bottom">
-                  <form method="post" novalidate>
-                    {% csrf_token %}
-            <div class="login-input-box">
-
-                <div class="form-group">
-                    {{ form.uname }}
-{#                    ★★★★★名字别写错  写错了没东西#}
-                    <span style="color:red">{{ form.uname.errors }}</span>
-                </div>
-                <div class="form-group">
-                    {{ form.pwd }}
-                    <span style="color:red">{{ form.pwd.errors }}</span>
-                </div>
-                <!-- 新增确认密码 -->
-                <div class="form-group">
-                    {{ form.confirm_pwd }}
-                    <span style="color:red">{{ form.confirm_pwd.errors }}</span>
-                </div>
-                <!-- 放在确认密码下面即可 -->
-                <div class="form-group">
-                    {{ form.email }}
-                    <span style="color:red">{{ form.email.errors }}</span>
-                </div>
-                    <button class="login-btn" style="color: white;text-decoration: none;cursor: pointer">注册</button>
-            </div>
-                  </form>
-                <div class="login-img">
-                    <img src="/static/images/login_05.png" alt="">
+            
+            <!-- 密码输入框 -->
+            <div class="form-group">
+                <span class="form-label">密码</span>
+                {{ form.pwd }}
+                <span class="error-message">{{ form.pwd.errors }}</span>
+                <div class="password-strength">
+                    <div class="strength-bar">
+                        <div class="strength-fill strength-weak"></div>
+                    </div>
                 </div>
             </div>
+            
+            <!-- 确认密码输入框 -->
+            <div class="form-group">
+                <span class="form-label">确认密码</span>
+                {{ form.confirm_pwd }}
+                <span class="error-message">{{ form.confirm_pwd.errors }}</span>
+            </div>
+            
+            <!-- 邮箱输入框 -->
+            <div class="form-group">
+                <span class="form-label">邮箱</span>
+                {{ form.email }}
+                <span class="error-message">{{ form.email.errors }}</span>
+            </div>
+            
+            <!-- 注册按钮 -->
+            <button type="submit" class="submit-btn">
+                <i class="fa fa-user-plus"></i>
+                立即注册
+            </button>
+        </form>
+        
+        <!-- 底部链接 -->
+        <div class="login-footer">
+            <p>已有账户？<a href="/user/login/">立即登录</a></p>
         </div>
     </div>
+</div>
+{% endblock %}
 
+{% block js %}
+<script>
+// 密码强度检测
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.querySelector('input[name="pwd"]');
+    const strengthBar = document.querySelector('.strength-fill');
+    const strengthText = document.querySelector('.password-strength');
+    
+    if (passwordInput && strengthBar && strengthText) {
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            const strength = getPasswordStrength(password);
+            
+            // 更新强度条
+            strengthBar.className = 'strength-fill ' + strength.class;
+            
+            // 更新提示文字
+            strengthText.innerHTML = `
+                <span>${strength.text}</span>
+                <div class="strength-bar">
+                    <div class="strength-fill ${strength.class}"></div>
+                </div>
+            `;
+        });
+    }
+    
+    function getPasswordStrength(password) {
+        if (password.length < 6) {
+            return { class: 'strength-weak', text: '密码太短' };
+        }
+        
+        let score = 0;
+        if (password.length >= 8) score++;
+        if (/[a-z]/.test(password)) score++;
+        if (/[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+        
+        if (score < 2) return { class: 'strength-weak', text: '密码强度：弱' };
+        if (score < 3) return { class: 'strength-medium', text: '密码强度：中等' };
+        if (score < 4) return { class: 'strength-strong', text: '密码强度：强' };
+        return { class: 'strength-very-strong', text: '密码强度：很强' };
+    }
+});
+</script>
 {% endblock %}
 
 

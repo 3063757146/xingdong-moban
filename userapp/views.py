@@ -19,6 +19,14 @@ import uuid
 import datetime
 from django.conf import settings
 from django.db import transaction
+from .utils.alipay_utils import (
+    get_alipay_client, 
+    create_trade_precreate, 
+    create_trade_page_pay, 
+    verify_notify,
+    query_trade_status
+)
+from django.db import transaction
 
 class RegisterForm(BootstrapModelForm):
     uname = forms.CharField(widget=forms.TextInput(), label="用户名", required=True)
@@ -177,28 +185,24 @@ def alipay_qrcode(request):
     if not user:
         return JsonResponse({"code": 401, "msg": "请先登录"})
     
-    alipay = get_alipay()
-    if not alipay:
-        return JsonResponse({"code": 500, "msg": "支付功能未配置，请检查密钥文件"})
-    
-    out_trade_no = str(uuid.uuid4()).replace("-", "")
-    amount = 0.1  # 0.1 元
-    score = 10   # 送 10 积分
-    
-    # 创建订单
-    order = models.RechargeOrder.objects.create(
-        user_id=user["userid"],
-        out_trade_no=out_trade_no,
-        amount=amount,
-        score=score
-    )
-    
-    # 调用支付宝当面付（生成二维码）
     try:
-        result = alipay.api_alipay_trade_precreate(
-            subject="GoodShop-积分充值",
+        out_trade_no = str(uuid.uuid4()).replace("-", "")
+        amount = 0.1  # 0.1 元
+        score = 10   # 送 10 积分
+        
+        # 创建订单
+        order = models.RechargeOrder.objects.create(
+            user_id=user["userid"],
             out_trade_no=out_trade_no,
-            total_amount=str(amount)
+            amount=amount,
+            score=score
+        )
+        
+        # 调用支付宝当面付（生成二维码）
+        result = create_trade_precreate(
+            order_no=out_trade_no,
+            total_amount=amount,
+            subject="AI生图平台-积分充值"
         )
         
         # 打印完整返回结果用于调试
@@ -218,25 +222,17 @@ def alipay_qrcode(request):
                 print(f"未找到二维码，完整响应: {result}")
                 return JsonResponse({"code": 500, "msg": "获取二维码失败，请查看后台日志"})
             
-            # 同时生成网页支付链接（方便电脑端测试）
-            # 使用 alipay.trade.page.pay 生成网页支付链接
+            # 生成网页支付链接
             try:
-                # 生成网页支付URL
-                page_pay_url = alipay.api_alipay_trade_page_pay(
-                    subject="GoodShop-积分充值",
-                    out_trade_no=out_trade_no,
-                    total_amount=str(amount),
-                    return_url=settings.ALIPAY.get("return_url", "http://127.0.0.1:8000/user/center/")
+                web_url = create_trade_page_pay(
+                    order_no=out_trade_no,
+                    total_amount=amount,
+                    subject="AI生图平台-积分充值"
                 )
-                # 拼接完整URL
-                if settings.ALIPAY["debug"]:
-                    web_url = "https://openapi.alipaydev.com/gateway.do?" + page_pay_url
-                else:
-                    web_url = "https://openapi.alipay.com/gateway.do?" + page_pay_url
-                
                 print(f"网页支付链接: {web_url}")
                 return JsonResponse({"code": 0, "qr": qr, "web_url": web_url, "oid": order.id})
-            except:
+            except Exception as e:
+                print(f"生成网页支付链接失败: {e}")
                 # 如果网页支付生成失败，只返回二维码
                 return JsonResponse({"code": 0, "qr": qr, "oid": order.id})
         else:
@@ -253,8 +249,33 @@ def query_order(request, oid):
     """前端轮询支付结果"""
     try:
         order = models.RechargeOrder.objects.get(id=oid)
+        print(f"查询订单状态: ID={oid}, 状态={order.status}, 订单号={order.out_trade_no}")
+        
+        # 如果订单状态还是待支付，尝试主动查询支付宝
+        if order.status == 0:
+            try:
+                from .utils.alipay_utils import query_trade_status
+                trade_result = query_trade_status(order.out_trade_no)
+                print(f"支付宝查询结果: {trade_result}")
+                
+                if trade_result and trade_result.get("trade_status") in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
+                    # 更新订单状态
+                    order.status = 1
+                    order.pay_time = datetime.datetime.now()
+                    order.save()
+                    
+                    # 增加用户积分
+                    user = order.user
+                    user.score += order.score
+                    user.save()
+                    
+                    print(f"主动查询发现支付成功，已更新订单和积分")
+            except Exception as e:
+                print(f"主动查询支付宝失败: {e}")
+        
         return JsonResponse({"status": order.status})
     except models.RechargeOrder.DoesNotExist:
+        print(f"订单不存在: {oid}")
         return JsonResponse({"status": -1, "msg": "订单不存在"})
 
 
@@ -262,38 +283,131 @@ def query_order(request, oid):
 @transaction.atomic
 def alipay_notify(request):
     """支付宝异步 POST 通知"""
+    print("=" * 50)
+    print("收到支付宝异步通知")
+    print(f"请求方法: {request.method}")
+    print(f"请求头: {dict(request.headers)}")
+    
     if request.method != "POST":
+        print("请求方法不是POST，返回fail")
         return HttpResponse("fail")
     
-    alipay = get_alipay()
-    if not alipay:
-        return HttpResponse("fail")
-    
+    # 获取所有POST数据
     data = {k: request.POST[k] for k in request.POST.keys()}
+    print(f"接收到的数据: {data}")
+    
     sign = data.pop("sign", None)
+    print(f"签名: {sign}")
     
     # 验证签名
-    if not alipay.verify(data, sign):
+    try:
+        is_valid = verify_notify(data, sign)
+        print(f"签名验证结果: {is_valid}")
+        
+        if not is_valid:
+            print("支付宝通知签名验证失败")
+            return HttpResponse("fail")
+    except Exception as e:
+        print(f"签名验证异常: {e}")
         return HttpResponse("fail")
     
     out_trade_no = data.get("out_trade_no")
     trade_status = data.get("trade_status")
+    total_amount = data.get("total_amount")
     
-    if trade_status == "TRADE_SUCCESS":
+    print(f"订单号: {out_trade_no}")
+    print(f"交易状态: {trade_status}")
+    print(f"交易金额: {total_amount}")
+    
+    if trade_status in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
         try:
             order = models.RechargeOrder.objects.select_for_update().get(out_trade_no=out_trade_no)
+            print(f"找到订单: {order.id}, 当前状态: {order.status}")
+            
             if order.status == 0:
+                # 更新订单状态
                 order.status = 1
                 order.pay_time = datetime.datetime.now()
                 order.save()
+                print(f"订单状态已更新为已支付")
+                
                 # 到账积分
+                user = order.user
+                old_score = user.score
+                user.score += order.score
+                user.save()
+                print(f"用户积分更新: {old_score} -> {user.score}")
+                
+                return HttpResponse("success")
+            else:
+                print(f"订单已经处理过，状态: {order.status}")
+                return HttpResponse("success")
+                
+        except models.RechargeOrder.DoesNotExist:
+            print(f"订单不存在: {out_trade_no}")
+            return HttpResponse("fail")
+        except Exception as e:
+            print(f"处理订单异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return HttpResponse("fail")
+    else:
+        print(f"交易状态不是成功状态: {trade_status}")
+        return HttpResponse("success")  # 对于其他状态也返回success，避免重复通知
+    
+    print("=" * 50)
+
+
+@csrf_exempt
+def manual_check_payment(request):
+    """手动检查支付状态（测试用）"""
+    if request.method == "POST":
+        oid = request.POST.get("oid")
+        if not oid:
+            return JsonResponse({"code": 400, "msg": "缺少订单ID"})
+        
+        try:
+            order = models.RechargeOrder.objects.get(id=oid)
+            print(f"手动检查订单: {order.id}, 订单号: {order.out_trade_no}")
+            
+            # 查询支付宝状态
+            from .utils.alipay_utils import query_trade_status
+            trade_result = query_trade_status(order.out_trade_no)
+            print(f"支付宝查询结果: {trade_result}")
+            
+            if trade_result and trade_result.get("trade_status") in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
+                # 更新订单状态
+                order.status = 1
+                order.save()
+                
+                # 增加用户积分
                 user = order.user
                 user.score += order.score
                 user.save()
+                
+                return JsonResponse({
+                    "code": 0, 
+                    "msg": "支付成功，积分已到账",
+                    "trade_result": trade_result
+                })
+            else:
+                return JsonResponse({
+                    "code": 1, 
+                    "msg": "支付未成功",
+                    "trade_result": trade_result
+                })
+                
         except models.RechargeOrder.DoesNotExist:
-            return HttpResponse("fail")
+            return JsonResponse({"code": 404, "msg": "订单不存在"})
+        except Exception as e:
+            return JsonResponse({"code": 500, "msg": f"查询失败: {str(e)}"})
     
-    return HttpResponse("success")
+    return JsonResponse({"code": 400, "msg": "请使用POST方法"})
+
+
+def payment_test_page(request):
+    """支付测试页面"""
+    return render(request, "payment_test.html")
 
 
 @csrf_exempt
