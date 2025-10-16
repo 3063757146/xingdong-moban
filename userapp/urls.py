@@ -1,9 +1,11 @@
 from django.urls import path
 from sqlalchemy.dialects.mssql.information_schema import views
-
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+from django.views.generic.base import RedirectView
 from userapp import views
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/user/login/', permanent=True)),
     path("user/register/", views.register),
     path("user/login/", views.login),
     path("user/center/", views.center),
@@ -17,5 +19,5 @@ urlpatterns = [
     # path('user/test_pay/', views.test_pay, name='test_pay'),
     # path('user/manual_check/', views.manual_check_payment, name='manual_check'),
     # path('user/payment_test/', views.payment_test_page, name='payment_test'),               # 测试支付（直接到账）
-
+    path('test/', lambda r: HttpResponse("Django OK")),
 ]

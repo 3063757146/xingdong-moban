@@ -24,8 +24,11 @@ SECRET_KEY = "django-insecure-i+-6piev5&qofxo*s(vdji)%vagfgu5n%z71mdgoampnnj%$a1
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+# 测试用True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['top1.chat', 'www.top1.chat', '127.0.0.1','*'] 
+
+ #测试使用[]
 
 
 # Application definition
@@ -78,9 +81,9 @@ WSGI_APPLICATION = "GoodShop.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'xingdong',  # 数据库名字
+        'NAME': 'ai_picture',  # 数据库名字
         'USER': 'root',
-        'PASSWORD': 'liu021003',
+        'PASSWORD': '9b21c77a4d54c562',
         'HOST': '127.0.0.1',  # 那台机器安装了MySQL
         'PORT': 3306,
     }
@@ -123,7 +126,7 @@ USE_TZ = True
 import  os
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 #★★★★★加上media路径
 # 媒体文件的 URL 前缀
