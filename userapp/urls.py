@@ -22,6 +22,5 @@ urlpatterns = [
     path('aiTools/', views.ai_tools,name='aitools'),
     path('ai/video_submit/', views.video_submit, name='video_submit'),
     path('ai/video_result/', views.video_result, name='video_result'),
-    path('mytest/', views.mytest, name='test'),
     # path('ai/generate_video/', views.generate_video, name='generate_video'),
 ]

@@ -365,142 +365,266 @@ def alipay_notify(request):
     
     print("=" * 50)
 
-
-
-# #ai 工具应用模块
-import json, base64, uuid, random, re, requests
+import base64, requests, json, uuid, traceback
 from django.http import JsonResponse
-from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
-APIYI_KEY = 'sk-DcYfVaWsubs4CGAo2fC09581049b4088Ac5bE28f6cC8E8C7'   
-BASE='https://api.apiyi.com/v1/chat/completions'
-
+from datetime import datetime
+import os
+SORA_API_KEY = "sk-8648df5ec30240e8a13f5874e8676755"
+SORA_API_URL = "https://grsai.dakka.com.cn/v1/video/sora-video"
+RESULT_API_URL = "https://grsai.dakka.com.cn/v1/draw/result"
 
 def ai_tools(request):
     print("-----------ai_tools-----------")
     return render(request, "aitools.html")
-MODEL_POOL=["gpt-3.5-turbo"]
 
-# ---------------- 提取视频 URL 函数 ----------------
-def extract_video_url(text: str) -> str:
-    """从 API 返回里提取视频链接，优先 JSON 字段，再 Markdown，再裸 URL"""
-    content = text
-    # 1. 尝试解析 JSON
-    if text.strip().startswith("{"):
-        try:
-            data = json.loads(text)
-            # 优先 JSON 结构字段
-            for key in ["video_url", "output", "url"]:
-                url = data.get(key)
-                if url:
-                    return url.strip()
-            # 回退到 choices[0].message.content
-            content = data.get("choices", [{}])[0].get("message", {}).get("content", text)
-        except Exception:
-            content = text
+UPLOAD_DIR = os.path.join("static", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    # 2. 匹配 Markdown 链接 [text](url)
-    md_link = re.search(r'\[.*?\]\s*\(\s*(https?://[^\s\)]+)\s*\)', content)
-    if md_link:
-        return md_link.group(1).strip('"\'')
-    
-    # 3. 匹配裸 URL，支持多种视频格式
-    bare_url = re.search(
-        r'(https?://[^\s"\']+\.(?:mp4|mov|m3u8|webm|avi)(?:\?[^\s"\']*)?)',
-        content, re.I
-    )
-    if bare_url:
-        return bare_url.group(1)
-    return 'https://www.w3schools.com/html/mov_bbb.mp4'  #生成失败默认视频
-    #return None
+# ---------------- 辅助函数 ----------------
+def extract_video_url(result_json: dict) -> str:
+    """从 result 接口返回中提取视频 URL"""
+    try:
+        results = result_json.get("data", {}).get("results", [])
+        if results and isinstance(results, list):
+            url = results[0].get("url")
+            if url:
+                return url
+    except Exception:
+        pass
+    # 失败或占位视频
+    return "https://www.w3schools.com/html/mov_bbb.mp4"
 
-
-# ---------------- 视频生成提交 ----------------
+# ---------------- 视频任务提交接口 ----------------
 @csrf_exempt
 def video_submit(request):
-    print("-----------video_submit-----------")
-
-    if request.method != 'POST':
-        return JsonResponse({'error': '仅支持 POST'}, status=405)
-
-    prompt = request.POST.get('prompt', '').strip()
-    file = request.FILES.get('image')
-    if not prompt and not file:
-        return JsonResponse({'error': '请提供提示词或图片'}, status=400)
-
-    # 1. 图片转 Base64
-    image_url = None
-    if file:
-        try:
-            raw = file.read()
-            ext = file.name.lower().split('.')[-1]
-            mime_type = f"image/{ext}" if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp'] else "image/jpeg"
-            image_b64 = base64.b64encode(raw).decode('utf-8')
-            image_url = f"data:{mime_type};base64,{image_b64}"
-        except Exception as e:
-            print("❌ 图片处理失败:", e)
-            return JsonResponse({'error': f'图片读取失败: {e}'}, status=400)
-
-    # 2. 构造请求数据
-    content = [{"type": "text", "text": prompt}]
-    if image_url:
-        content.append({"type": "image_url", "image_url": {"url": image_url}})
-
-    payload = {
-        "model": random.choice(MODEL_POOL),
-        "stream": False,
-        "messages": [{"role": "user", "content": content}]
-    }
-
-    headers = {
-        "Authorization": f"Bearer {APIYI_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    # 3. 发送请求
     try:
-        print("🚀 向 API 发送请求中...")
-        resp = requests.post(BASE, headers=headers, json=payload, timeout=600)
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print("❌ 请求异常:", e)
-        if hasattr(e, "response") and e.response is not None:
-            print("📜 响应文本:", e.response.text[:500])
-        return JsonResponse({'error': f'API 请求失败: {e}'}, status=500)
+        prompt = request.POST.get("prompt", "").strip()
+        image = request.FILES.get("image")
 
-    text = resp.text
-    print("✅ API 返回前500字符：", text[:500])
+        if not prompt and not image:
+            return JsonResponse({"error": "请提供提示词或图片"}, status=400)
 
-    # 4. 提取视频链接
-    video_url = extract_video_url(text)
-    if not video_url:
-        print("⚠️ 未能解析到视频链接，完整返回内容：", text[:1000])
-        return JsonResponse({'error': '❌未能解析到视频链接，API可能返回异常内容'}, status=500)
+        # 图片上传处理（生成公网 URL）
+        image_url = None
+        if image:
+            filename = f"{uuid.uuid4().hex}_{image.name}"
+            save_path = os.path.join(UPLOAD_DIR, filename)
+            with open(save_path, "wb") as f:
+                for chunk in image.chunks():
+                    f.write(chunk)
+            # 替换为你服务器的公网域名
+            image_url = f"https://top1.chat/static/uploads/{filename}"
+            print("-------------image_url------------", image_url)
+        # 构造请求参数
+        payload = {
+            "model": "sora-2",
+            "prompt": prompt or "A beautiful landscape",
+            "aspectRatio": "16:9",
+            "duration": 10,
+            "size": "small",
+            "webHook": "-1",  # 不使用回调，立即返回任务 ID
+            "shutProgress": False
+        }
+        if image_url:
+            payload["url"] = image_url
 
-    # 5. 缓存并返回任务 ID
-    fake_task_id = str(uuid.uuid4())
-    cache.set(fake_task_id, video_url, 300)
-    print("✅ 任务创建成功:", fake_task_id, video_url)
-    return JsonResponse({'task_id': fake_task_id})
+        headers = {
+            "Authorization": f"Bearer {SORA_API_KEY}",
+            "Content-Type": "application/json"
+        }
 
+        r = requests.post(SORA_API_URL, headers=headers, json=payload, timeout=60)
+        data = r.json()
+        print("[📤 请求数据]", payload)
+        print("[📥 API 响应]", data)
 
-# ---------------- 轮询任务结果 ----------------
+        # 提交成功，返回 task_id
+        if data.get("code") == 0 and "id" in data.get("data", {}):
+            task_id = data["data"]["id"]
+            return JsonResponse({"task_id": task_id})
+        else:
+            return JsonResponse({"error": data.get("msg", "提交失败")}, status=400)
+
+    except Exception as e:
+        return JsonResponse({"error": f"提交异常: {str(e)}"}, status=500)
+
+# ---------------- 视频结果查询接口 ----------------
 @csrf_exempt
 def video_result(request):
-    print("-----------video_result-----------")
-    task_id = request.GET.get('task')
-    if not task_id:
-        return JsonResponse({'error': '缺少 task 参数'}, status=400)
+    try:
+        task_id = request.GET.get("task")
+        if not task_id:
+            return JsonResponse({"error": "缺少任务 ID"}, status=400)
 
-    video_url = cache.get(task_id)
-    if video_url:
-        return JsonResponse({'status': 'completed', 'video_url': video_url})
-    return JsonResponse({'status': 'processing'})
+        payload = {"id": task_id}
+        headers = {
+            "Authorization": f"Bearer {SORA_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        r = requests.post(RESULT_API_URL, headers=headers, json=payload, timeout=60)
+        data = r.json()
+        print("[🧩 结果响应]", data)
+
+        # code -22 表示任务不存在或未完成
+        if data.get("code") == -22 or not data.get("data"):
+            return JsonResponse({"status": "processing"})
+
+        # 任务完成
+        status = data.get("data", {}).get("status")
+        if status == "succeeded":
+            video_url = extract_video_url(data)
+            return JsonResponse({"status": "completed", "video_url": video_url})
+        elif status == "failed":
+            reason = data.get("data", {}).get("failure_reason") or data.get("data", {}).get("error")
+            return JsonResponse({"status": "failed", "error": f"生成失败：{reason}"})
+        else:
+            return JsonResponse({"status": "processing"})
+
+    except Exception as e:
+        return JsonResponse({"error": f"查询异常: {str(e)}"}, status=500)
 
 
-def mytest(request):
-    return HttpResponse("test")
+
+
+
+
+
+# # # #ai 工具应用模块
+# import json, base64, uuid, random, re, requests
+# from django.http import JsonResponse
+# from django.shortcuts import render
+# from django.views.decorators.csrf import csrf_exempt
+# from django.core.cache import cache
+# APIYI_KEY = 'sk-DcYfVaWsubs4CGAo2fC09581049b4088Ac5bE28f6cC8E8C7'   
+# BASE='https://api.apiyi.com/v1/chat/completions'
+
+
+# def ai_tools(request):
+#     print("-----------ai_tools-----------")
+#     return render(request, "aitools.html")
+# MODEL_POOL=["gpt-3.5-turbo"]
+
+# # ---------------- 提取视频 URL 函数 ----------------
+# def extract_video_url(text: str) -> str:
+#     """从 API 返回里提取视频链接，优先 JSON 字段，再 Markdown，再裸 URL"""
+#     content = text
+#     # 1. 尝试解析 JSON
+#     if text.strip().startswith("{"):
+#         try:
+#             data = json.loads(text)
+#             # 优先 JSON 结构字段
+#             for key in ["video_url", "output", "url"]:
+#                 url = data.get(key)
+#                 if url:
+#                     return url.strip()
+#             # 回退到 choices[0].message.content
+#             content = data.get("choices", [{}])[0].get("message", {}).get("content", text)
+#         except Exception:
+#             content = text
+
+#     # 2. 匹配 Markdown 链接 [text](url)
+#     md_link = re.search(r'\[.*?\]\s*\(\s*(https?://[^\s\)]+)\s*\)', content)
+#     if md_link:
+#         return md_link.group(1).strip('"\'')
+    
+#     # 3. 匹配裸 URL，支持多种视频格式
+#     bare_url = re.search(
+#         r'(https?://[^\s"\']+\.(?:mp4|mov|m3u8|webm|avi)(?:\?[^\s"\']*)?)',
+#         content, re.I
+#     )
+#     if bare_url:
+#         return bare_url.group(1)
+#     return 'https://www.w3schools.com/html/mov_bbb.mp4'  #生成失败默认视频
+#     #return None
+
+
+# # ---------------- 视频生成提交 ----------------
+# @csrf_exempt
+# def video_submit(request):
+#     print("-----------video_submit-----------")
+
+#     if request.method != 'POST':
+#         return JsonResponse({'error': '仅支持 POST'}, status=405)
+
+#     prompt = request.POST.get('prompt', '').strip()
+#     file = request.FILES.get('image')
+#     if not prompt and not file:
+#         return JsonResponse({'error': '请提供提示词或图片'}, status=400)
+
+#     # 1. 图片转 Base64
+#     image_url = None
+#     if file:
+#         try:
+#             raw = file.read()
+#             ext = file.name.lower().split('.')[-1]
+#             mime_type = f"image/{ext}" if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp'] else "image/jpeg"
+#             image_b64 = base64.b64encode(raw).decode('utf-8')
+#             image_url = f"data:{mime_type};base64,{image_b64}"
+#         except Exception as e:
+#             print("❌ 图片处理失败:", e)
+#             return JsonResponse({'error': f'图片读取失败: {e}'}, status=400)
+
+#     # 2. 构造请求数据
+#     content = [{"type": "text", "text": prompt}]
+#     if image_url:
+#         content.append({"type": "image_url", "image_url": {"url": image_url}})
+
+#     payload = {
+#         "model": random.choice(MODEL_POOL),
+#         "stream": False,
+#         "messages": [{"role": "user", "content": content}]
+#     }
+
+#     headers = {
+#         "Authorization": f"Bearer {APIYI_KEY}",
+#         "Content-Type": "application/json"
+#     }
+
+#     # 3. 发送请求
+#     try:
+#         print("🚀 向 API 发送请求中...")
+#         resp = requests.post(BASE, headers=headers, json=payload, timeout=600)
+#         resp.raise_for_status()
+#     except requests.exceptions.RequestException as e:
+#         print("❌ 请求异常:", e)
+#         if hasattr(e, "response") and e.response is not None:
+#             print("📜 响应文本:", e.response.text[:500])
+#         return JsonResponse({'error': f'API 请求失败: {e}'}, status=500)
+
+#     text = resp.text
+#     print("✅ API 返回前500字符：", text[:500])
+
+#     # 4. 提取视频链接
+#     video_url = extract_video_url(text)
+#     if not video_url:
+#         print("⚠️ 未能解析到视频链接，完整返回内容：", text[:1000])
+#         return JsonResponse({'error': '❌未能解析到视频链接，API可能返回异常内容'}, status=500)
+
+#     # 5. 缓存并返回任务 ID
+#     fake_task_id = str(uuid.uuid4())
+#     cache.set(fake_task_id, video_url, 300)
+#     print("✅ 任务创建成功:", fake_task_id, video_url)
+#     return JsonResponse({'task_id': fake_task_id})
+
+
+# # ---------------- 轮询任务结果 ----------------
+# @csrf_exempt
+# def video_result(request):
+#     print("-----------video_result-----------")
+#     task_id = request.GET.get('task')
+#     if not task_id:
+#         return JsonResponse({'error': '缺少 task 参数'}, status=400)
+
+#     video_url = cache.get(task_id)
+#     if video_url:
+#         return JsonResponse({'status': 'completed', 'video_url': video_url})
+#     return JsonResponse({'status': 'processing'})
+
+
+
 
 # import json, uuid, random, requests, re
 # from django.core.cache import cache
