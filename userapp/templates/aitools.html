@@ -1,0 +1,316 @@
+{% extends 'layout.html' %}
+
+{% block title %}Sora2 视频生成{% endblock %}
+
+{% block main %}
+<div id="app">
+    <!-- 1. 顶部标题 -->
+    <h2 class="title">效果预览</h2>
+    <p class="subtitle">这是该模型可以达到的生成效果。下方输入提示词即可开始创作。</p>
+
+    <!-- 2. 视频预览卡片（空态 / 视频态） -->
+    <div id="previewCard">
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="#4d4d4d">
+                <polygon points="18,12 36,24 18,36"></polygon>
+            </svg>
+            <p class="note">目前暂不支持真人或者类似真人的图片当参考图</p>
+        </div>
+    </div>
+
+    <!-- 3. 提示词 + 上传图片 -->
+    <div class="prompt-line">
+        <div class="upload-box">
+            <label for="imageInput" class="upload-btn">📎 添加图片</label>
+            <input type="file" id="imageInput" accept="image/*" style="display:none;">
+            <img id="previewImage" class="preview-thumb" style="display:none;">
+        </div>
+        <textarea id="prompt" placeholder="描述你想要生成的视频内容.."></textarea>
+    </div>
+
+    <!-- 4. 主按钮 -->
+    <button id="submitBtn" class="submit-btn" >立即生成</button>
+
+    <!-- 5. 状态/进度 -->
+    <div id="status"></div>
+</div>
+{% endblock %}
+
+{% block css %}
+<style>
+/* body {
+    background: #e7e6e6;
+    color: #fff;
+    font-family: Inter, Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    padding-top: 60px;
+} */
+
+#app {
+    width: 640px;
+    margin: 0 auto;
+    text-align: left;
+}
+#submitBtn {
+    display: block;
+    margin: 0 auto 12px auto; /* 上右下左，水平居中，下方留点间距 */
+}
+.title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #b3b3b3;
+    line-height: 20px;
+    margin-bottom: 32px;
+}
+
+/* ===== 预览卡片（空态 & 视频态） ===== */
+#previewCard {
+    width: 640px;
+    height: 360px;
+    border-radius: 12px;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #0e0e0e 100%);
+    border: 1px solid #333;
+    position: relative;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.3s;
+    overflow: hidden;
+}
+
+#previewCard:hover {
+    border-color: #555;
+}
+
+#previewCard .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+#previewCard svg {
+    display: block;
+}
+
+#previewCard .note {
+    position: absolute;
+    bottom: 12px;
+    width: 100%;
+    text-align: center;
+    color: #808080;
+    font-size: 12px;
+}
+
+#previewCard video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+/* ===== 提示词 + 上传 ===== */
+.prompt-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.upload-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.upload-btn {
+    margin-top: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 15px;      /* 固定高度，避免出现黑块 */
+    line-height: 15px; /* 与高度一致 */
+}
+
+.upload-btn:hover {
+    filter: brightness(1.2);
+}
+
+.preview-thumb {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #333;
+    margin-top: 8px;
+}
+
+textarea {
+    flex: 1 1 auto;
+    height: 100px;
+    border-radius: 8px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 12px;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    transition: all 0.3s;
+}
+
+textarea:focus {
+    border-color: #00ff66;
+    box-shadow: 0 0 0 2px #00ff6622;
+}
+
+textarea::placeholder {
+    color: #666;
+}
+
+/* ===== 按钮 & 状态 ===== */
+button {
+    width: 140px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #00ff66 0%, #00dd55 100%);
+    color: #000;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+button:hover {
+    filter: brightness(1.1);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+    filter: none;
+}
+
+#status {
+    height: 20px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #00ff66;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 720px) {
+    #app {
+        width: 92vw;
+        max-width: 640px;
+    }
+    button {
+        width: 100%;
+    }
+    #previewCard,
+    video {
+        width: 100%;
+        height: calc(100vw * 9 / 16);
+    }
+}
+</style>
+{% endblock %}
+
+{% block js %}
+<script>
+const STATUS = document.getElementById('status');
+const BTN = document.getElementById('submitBtn');
+const IMAGE_INPUT = document.getElementById('imageInput');
+const PREVIEW_IMG = document.getElementById('previewImage');
+
+/* 图片上传预览 */
+IMAGE_INPUT.onchange = () => {
+    const file = IMAGE_INPUT.files[0];
+    if (file) {
+        PREVIEW_IMG.src = URL.createObjectURL(file);
+        PREVIEW_IMG.style.display = 'block';
+    } else {
+        PREVIEW_IMG.style.display = 'none';
+    }
+};
+
+/* 生成按钮逻辑 */
+BTN.onclick = async () => {
+    const prompt = document.getElementById('prompt').value.trim();
+    const file = IMAGE_INPUT.files[0];
+    if (!prompt && !file) return alert('请先输入提示词或上传图片');
+
+    BTN.disabled = true;
+    STATUS.textContent = '提交中…';
+
+    try {
+        const formData = new FormData();
+        formData.append('prompt', prompt);
+        if (file) formData.append('image', file);
+
+        const r1 = await fetch('/ai/video_submit/', { method: 'POST', body: formData });
+        const j1 = await r1.json();
+        if (j1.error) throw new Error(j1.error);
+
+        STATUS.textContent = '任务已创建，正在生成中…';
+
+        let count = 0;
+        const poll = setInterval(async () => {
+            count++;
+            const r2 = await fetch(`/ai/video_result/?task=${j1.task_id}`);
+            const j2 = await r2.json();
+            if (j2.error) {
+                clearInterval(poll);
+                throw new Error(j2.error);
+            }
+
+            if (j2.status === 'completed') {
+                clearInterval(poll);
+                STATUS.textContent = '生成完成！';
+
+                // 将视频塞进预览卡片
+                const card = document.getElementById('previewCard');
+                card.innerHTML = '';
+                const v = document.createElement('video');
+                v.src = j2.video_url;
+                v.controls = true;
+                v.autoplay = true;
+                card.appendChild(v);
+
+                BTN.disabled = false;
+            } else if (j2.status === 'failed') {
+                clearInterval(poll);
+                throw new Error('任务失败');
+            } else {
+                STATUS.textContent = `生成中 ${j2.status} …`;
+            }
+
+            if (count >= 60) {
+                clearInterval(poll);
+                throw new Error('生成超时，请重试');
+            }
+        }, 3000);
+    } catch (e) {
+        STATUS.innerHTML = `<span class="error">${e.message}</span>`;
+        BTN.disabled = false;
+    }
+};
+</script>
+{% endblock %}

@@ -26,7 +26,10 @@ SECRET_KEY = "django-insecure-i+-6piev5&qofxo*s(vdji)%vagfgu5n%z71mdgoampnnj%$a1
 DEBUG = True
 # 测试用True
 
-ALLOWED_HOSTS = ['top1.chat', 'www.top1.chat', '127.0.0.1','*'] 
+
+# CSRF_TRUSTED_ORIGINS = ['https://top1.chat', 'https://www.top1.chat']
+ALLOWED_HOSTS = ['top1.chat', 'localhost', '127.0.0.1','*']
+# ALLOWED_HOSTS = ['top1.chat', 'www.top1.chat', '127.0.0.1','*'] 
 
  #测试使用[]
 

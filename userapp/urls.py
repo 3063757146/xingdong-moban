@@ -19,5 +19,9 @@ urlpatterns = [
     # path('user/test_pay/', views.test_pay, name='test_pay'),
     # path('user/manual_check/', views.manual_check_payment, name='manual_check'),
     # path('user/payment_test/', views.payment_test_page, name='payment_test'),               # 测试支付（直接到账）
-    path('test/', lambda r: HttpResponse("Django OK")),
+    path('aiTools/', views.ai_tools,name='aitools'),
+    path('ai/video_submit/', views.video_submit, name='video_submit'),
+    path('ai/video_result/', views.video_result, name='video_result'),
+    path('mytest/', views.mytest, name='test'),
+    # path('ai/generate_video/', views.generate_video, name='generate_video'),
 ]

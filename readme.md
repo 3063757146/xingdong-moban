@@ -1,3 +1,5 @@
+systemctl restart gunicorn-xingdong
+
 # AI生图平台 - 完整支付功能实现
 
 ## 🎯 项目简介

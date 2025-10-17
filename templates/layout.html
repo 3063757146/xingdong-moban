@@ -85,7 +85,18 @@
             transition: all 0.3s ease;
             margin-top: 5px;
         }
-        
+        .aitools-info {
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding: 15px 20px;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            margin-right: 30px;
+        }
         .user-info:hover {
             background: rgba(255,255,255,0.2);
             transform: translateY(-2px);
@@ -131,9 +142,10 @@
             border-radius: 12px;
         }
         
-        .user-link:hover {
+        .aitools-link {
             color: white;
             background: rgba(255,255,255,0.2);
+            font-size: 25px;
         }
         
         .logout-link:hover {
@@ -257,7 +269,7 @@
         <div class="platform-title">
             <a href="/" class="brand-link">
                 <i class="fa fa-magic"></i>
-                <span class="brand-text">AI生图平台</span>
+                <span class="brand-text">星动AI生图平台</span>
             </a>
         </div>
         
@@ -265,6 +277,9 @@
         <div class="user-section">
             {% if request.session.info %}
                 <!-- 已登录状态 -->
+                <div class="aitools-info">
+                    <a href="/aiTools/" class="aitools-link">AI工具-Sora2</a>
+                </div>
                 <div class="user-info">
                     <div class="user-avatar">
                         <i class="fa fa-user-circle"></i>
